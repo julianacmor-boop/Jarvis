@@ -45,7 +45,7 @@ button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-.app { height: 100%; display: grid; grid-template-rows: auto auto 1fr; gap: 12px; min-height: 0; }
+.app { min-height: 100%; display: grid; grid-template-rows: auto auto 1fr; gap: 12px; }
 
 /* Cabecalho */
 .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -117,7 +117,7 @@ button { cursor: pointer; }
 
 /* Conversa */
 .chat { flex: 1; }
-.log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 2px 4px 10px 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.log { flex: 1; min-height: 200px; max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 2px 4px 10px 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .msg { max-width: 86%; padding: 10px 14px; border-radius: 2px; border: 1px solid var(--line); background: var(--panel-2); overflow-wrap: anywhere; white-space: pre-wrap; }
 .msg.me { align-self: flex-end; background: #0f2c42; border-color: var(--cyan-dim); }
 .msg.ai { align-self: flex-start; }
@@ -132,10 +132,21 @@ button { cursor: pointer; }
 .composer input:focus { border-color: var(--cyan); outline: none; box-shadow: 0 0 0 2px #5fd4ff33; }
 .composer .btn { min-height: 52px; }
 .hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; }
+.voicebox { border: 1px solid var(--line); background: var(--panel-2); padding: 10px 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+.vrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pill { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.04em; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+.pill[data-s="ok"] { color: var(--ok); border-color: var(--ok); }
+.pill[data-s="warn"] { color: var(--amber); border-color: var(--amber); }
+.pill[data-s="bad"] { color: var(--danger); border-color: var(--danger); }
+.voicebox summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; color: var(--cyan); font-weight: 500; }
+.voicebox ol { margin: 2px 0 6px; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.voicebox p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.voicebox label { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.voicebox select { flex: 1; min-width: 0; max-width: 100%; min-height: 44px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 2px; padding: 0 8px; }
 
 /* Tarefas e timers */
 .tasks { flex: 1; }
-.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; flex: 1; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 120px; max-height: 320px; flex: 1; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .task { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 6px 0 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; }
 .task input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--cyan); flex: none; }
 .task span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -228,6 +239,29 @@ button { cursor: pointer; }
 
     <section class="panel chat" aria-label="Conversa com o Jarvis">
       <p class="label"><span>Conversa</span><span id="chatMode"></span></p>
+      <div class="voicebox" id="voiceBox">
+        <div class="vrow">
+          <button class="btn primary" id="enableVoiceBtn" type="button">Ativar voz e microfone</button>
+          <span class="pill" id="micState" data-s="warn">Microfone: não autorizado</span>
+          <span class="pill" id="ttsState" data-s="ok">Respostas em voz: ligadas</span>
+        </div>
+        <details id="micHelp" open>
+          <summary>Como autorizar o microfone (4 passos)</summary>
+          <ol>
+            <li>Toque em <b>Ativar voz e microfone</b>.</li>
+            <li>Quando o Chrome perguntar, toque em <b>Permitir</b>.</li>
+            <li>Para dar um comando: toque em <b>Falar</b>, ao lado de Enviar, e fale.</li>
+            <li>Para mãos livres: toque em <b>Escuta</b> e diga "Jarvis" antes do comando.</li>
+          </ol>
+          <p>Se o Chrome bloqueou antes: toque no ícone à esquerda do endereço, depois em <b>Permissões</b>, <b>Microfone</b>, <b>Permitir</b>, e atualize a página.</p>
+        </details>
+        <div class="vrow">
+          <button class="btn" id="listen2Btn" type="button" aria-pressed="false">Escuta: desligada</button>
+          <label for="voiceSel">Voz</label>
+          <select id="voiceSel"><option value="">Voz padrão do aparelho</option></select>
+          <button class="btn" id="testVoiceBtn" type="button">Testar voz</button>
+        </div>
+      </div>
       <div class="log" id="log" aria-live="polite"></div>
       <div class="chips" id="chips"></div>
       <form class="composer" id="form" autocomplete="off">
@@ -380,23 +414,48 @@ button { cursor: pointer; }
   $("#presets").addEventListener("click", function (e) { var b = e.target.closest("button[data-min]"); if (b) startTimer(b.dataset.min); });
 
   /* ---------- Voz (saida) ---------- */
-  var speakOn = false, talking = false, speakBtn = $("#speakBtn");
-  if (!("speechSynthesis" in window)) speakBtn.hidden = true;
-  speakBtn.addEventListener("click", function () {
-    speakOn = !speakOn; speakBtn.setAttribute("aria-pressed", String(speakOn));
-    speakBtn.textContent = "Voz: " + (speakOn ? "ligada" : "desligada");
-    if (!speakOn) { try { speechSynthesis.cancel(); } catch (e) {} talking = false; } else { say("Voz ligada.", true); }
-  });
+  var speakOn = store.get("jarvis.speak", true), talking = false, speakBtn = $("#speakBtn"), voiceSel = $("#voiceSel"), voices = [];
+  var hasTTS = "speechSynthesis" in window;
+  if (!hasTTS) speakBtn.hidden = true;
+  function setPill(id, state, text) { var p = $(id); p.dataset.s = state; p.textContent = text; }
+  function setSpeak(on) {
+    speakOn = on; store.set("jarvis.speak", on);
+    speakBtn.setAttribute("aria-pressed", String(on)); speakBtn.textContent = "Voz: " + (on ? "ligada" : "desligada");
+    setPill("#ttsState", on ? "ok" : "warn", on ? "Respostas em voz: ligadas" : "Respostas em voz: desligadas");
+    if (!on) { try { speechSynthesis.cancel(); } catch (e) {} talking = false; }
+  }
+  speakBtn.addEventListener("click", function () { setSpeak(!speakOn); if (speakOn) say("Voz ligada.", true); });
+  function pickVoice() {
+    var saved = store.get("jarvis.voice", ""), pt = voices.filter(function (v) { return /^pt/i.test(v.lang); });
+    var byName = voices.filter(function (v) { return v.name === saved; })[0];
+    if (byName) return byName;
+    var pref = pt.filter(function (v) { return /google|natural|francisca|luciana|antonio|maria/i.test(v.name) && /pt[-_]BR/i.test(v.lang); })[0];
+    return pref || pt.filter(function (v) { return /pt[-_]BR/i.test(v.lang); })[0] || pt[0] || null;
+  }
+  function loadVoices() {
+    if (!hasTTS) return;
+    voices = speechSynthesis.getVoices() || [];
+    var pt = voices.filter(function (v) { return /^pt/i.test(v.lang); });
+    voiceSel.textContent = "";
+    if (!pt.length) { var o0 = el("option", null, "Voz padrão do aparelho"); o0.value = ""; voiceSel.appendChild(o0); return; }
+    var cur = pickVoice();
+    pt.forEach(function (v) { var o = el("option", null, v.name + " (" + v.lang + ")"); o.value = v.name; if (cur && cur.name === v.name) o.selected = true; voiceSel.appendChild(o); });
+  }
+  if (hasTTS) { loadVoices(); try { speechSynthesis.addEventListener("voiceschanged", loadVoices); } catch (e) {} }
+  voiceSel.addEventListener("change", function () { store.set("jarvis.voice", voiceSel.value); say("Esta é a voz do Jarvis.", true); });
+  $("#testVoiceBtn").addEventListener("click", function () { say("Olá. Eu sou o Jarvis. Esta é a minha voz.", true); });
   function say(text, force) {
-    if (!speakOn && !force) return;
+    if (!hasTTS || (!speakOn && !force)) return;
     try {
       speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text); u.lang = "pt-BR";
+      var u = new SpeechSynthesisUtterance(text); u.lang = "pt-BR"; u.rate = 1; u.pitch = 1;
+      var v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; }
       u.onstart = function () { talking = true; };
       u.onend = u.onerror = function () { talking = false; };
       speechSynthesis.speak(u);
     } catch (e) {}
   }
+  setSpeak(speakOn);
 
   /* ---------- Tela cheia e tela acesa ---------- */
   var fsBtn = $("#fsBtn");
@@ -531,10 +590,11 @@ button { cursor: pointer; }
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var micBtn = $("#micBtn"), listenBtn = $("#listenBtn"), rec = null, oneShot = false, always = false, awaiting = 0;
   function setMic(on) { oneShot = on; micBtn.setAttribute("aria-pressed", String(on)); micBtn.textContent = on ? "Ouvindo..." : "Falar"; }
-  function setListen(on) { always = on; listenBtn.setAttribute("aria-pressed", String(on)); listenBtn.textContent = "Escuta: " + (on ? "ligada" : "desligada"); }
+  var listen2Btn = $("#listen2Btn");
+  function setListen(on) { always = on; [listenBtn, listen2Btn].forEach(function (b) { b.setAttribute("aria-pressed", String(on)); b.textContent = "Escuta: " + (on ? "ligada" : "desligada"); }); }
   function micDenied() {
-    setMic(false); setListen(false);
-    bubble("ai", "O microfone foi bloqueado. Toque no cadeado ao lado do endereço do site, libere o Microfone e tente de novo. Enquanto isso, use o microfone do teclado.");
+    setMic(false); setListen(false); setMicState("bad"); $("#micHelp").open = true;
+    bubble("ai", "O microfone está bloqueado. Toque no ícone à esquerda do endereço do site, depois em Permissões, Microfone, Permitir. Atualize a página e toque em Ativar voz e microfone. Enquanto isso, use o microfone do teclado.");
     $("#msgInput").focus();
   }
   function startRec(continuous) {
@@ -573,7 +633,39 @@ button { cursor: pointer; }
     setMic(false); setListen(true); startRec(true);
     bubble("ai", "Escuta ligada. Diga \"Jarvis\" e o comando, por exemplo: \"Jarvis, timer de 5 minutos\".");
   });
-  if (!SR) { micBtn.disabled = true; listenBtn.disabled = true; micBtn.title = "Use o Chrome no Android"; }
+  if (!SR) { micBtn.disabled = true; listenBtn.disabled = true; listen2Btn.disabled = true; micBtn.title = "Use o Chrome no Android"; }
+
+  /* ---------- Autorização do microfone ---------- */
+  function setMicState(s) {
+    if (s === "ok") setPill("#micState", "ok", "Microfone: autorizado");
+    else if (s === "bad") setPill("#micState", "bad", "Microfone: bloqueado");
+    else setPill("#micState", "warn", "Microfone: não autorizado");
+  }
+  function checkMicPermission() {
+    try {
+      if (!navigator.permissions || !navigator.permissions.query) return;
+      navigator.permissions.query({ name: "microphone" }).then(function (p) {
+        var apply = function () { setMicState(p.state === "granted" ? "ok" : p.state === "denied" ? "bad" : "pending"); if (p.state === "granted") $("#micHelp").open = false; };
+        apply(); p.onchange = apply;
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  $("#enableVoiceBtn").addEventListener("click", async function () {
+    setSpeak(true); say("Voz ligada. Vou pedir acesso ao microfone.", true);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { bubble("ai", "Este navegador não permite usar o microfone aqui. Use o Chrome no Android."); return; }
+    try {
+      var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(function (t) { t.stop(); });
+      setMicState("ok"); $("#micHelp").open = false;
+      var msg = "Microfone autorizado. Toque em Falar, ou em Escuta e diga Jarvis seguido do comando.";
+      bubble("ai", msg); say(msg, true);
+    } catch (e) {
+      if (e && (e.name === "NotAllowedError" || e.name === "SecurityError")) micDenied();
+      else { setMicState("pending"); bubble("ai", "Não encontrei um microfone neste aparelho."); }
+    }
+  });
+  listen2Btn.addEventListener("click", function () { listenBtn.click(); });
+  setMicState("pending"); checkMicPermission();
 
   /* ---------- Inicio ---------- */
   function setStatus() { var on = navigator.onLine !== false; $("#status").dataset.state = on ? "on" : "local"; $("#statusText").textContent = on ? "online" : "offline"; }
@@ -585,7 +677,7 @@ button { cursor: pointer; }
   setInterval(tickClock, 1000);
   setInterval(function () { loadWeather(false); renderWeather(); }, 600000);
   loadWeather(true);
-  bubble("ai", "Pronto. Toque em Falar, ou ligue a Escuta e diga \"Jarvis\" antes do comando. Diga \"ajuda\" para ver o que sei fazer.");
+  bubble("ai", "Pronto. Para usar a voz, toque em Ativar voz e microfone, logo acima. Diga \"ajuda\" para ver o que sei fazer.");
 })();
 </script>
 </body>
