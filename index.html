@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060c16">
-<meta name="jarvis-version" content="5">
+<meta name="jarvis-version" content="6">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Jarvis</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -583,11 +583,17 @@ button { cursor: pointer; }
     { name: "o portal do NAV, com notas, aulas e mensagens", url: "https://aluno.triventoeducacao.com.br/", re: /notas?|aulas?|mensagens?|portal/ }
   ];
   var pendingLink = null;
+  var VERB = /^(?:por favor\s+)?(?:abrir|abri|abre|abra|abrindo|acessar|acesse|entrar no|entrar na|entrar em|ir para|ir pro|ir no|ir na|vai para|va para|ver|mostrar|mostre|me leve para|quero ver|quero abrir|iniciar|ligar)\s+(?:o |a |os |as |meu |minha |minhas |meus |no |na |do |da )*(.+)$/;
+  var NOT_SHORTCUT = /tarefa|timer|temporizador|cronometro|clima|tempo|chuva|temperatura|previsao|horas|concluir|pendente|voz|escuta|ajuda|comandos/;
   function openShortcut(n) {
-    var m = n.match(/^(?:por favor\s+)?(?:abrir|abre|abra|abrindo|ir para|ir pro|vai para|va para|ver|mostrar|mostre|me leve para|quero ver)\s+(?:o |a |os |as |meu |minha |minhas |meus |no |na )*(.+)$/);
-    if (!m) return null;
-    var q = m[1], it = SHORTCUTS.filter(function (x) { return x.re.test(q); })[0];
-    if (!it) return "Não conheço esse atalho. Posso abrir Gmail, Agenda, Mapas, YouTube, WhatsApp, Spotify e o NAV (atividades, notas, aulas e mensagens).";
+    var m = n.match(VERB), q;
+    if (m) q = m[1];
+    else {
+      if (n.split(/\s+/).length > 3 || NOT_SHORTCUT.test(n)) return null;
+      q = n;
+    }
+    var it = SHORTCUTS.filter(function (x) { return x.re.test(q); })[0];
+    if (!it) return m ? "Não conheço esse atalho. Posso abrir Gmail, Agenda, Mapas, YouTube, WhatsApp, Spotify e o NAV (atividades, notas, aulas e mensagens)." : null;
     pendingLink = it;
     var w = null; try { w = window.open(it.url, "_blank"); if (w) w.opener = null; } catch (e) { w = null; }
     return w ? "Abrindo " + it.name + "." : "Pronto. Toque no botão para abrir " + it.name + ".";
@@ -629,7 +635,7 @@ button { cursor: pointer; }
     if (/que horas|horas sao|hora atual|me diga a hora/.test(n)) return "Agora são " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + ".";
     if (/que dia|data de hoje|qual a data|dia da semana/.test(n)) return "Hoje é " + new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + ".";
     if (/ajuda|comandos|o que voce (faz|sabe)|como funciona/.test(n)) return HELP;
-    return "Não entendi. Tente, por exemplo: \"timer de 5 minutos\", \"adicionar tarefa comprar pão\" ou \"como está o tempo em Lorena?\".";
+    return "Ouvi: \"" + text + "\". Não entendi esse comando. Tente, por exemplo: \"abrir agenda\", \"timer de 5 minutos\" ou \"como está o tempo em Lorena?\".";
   }
 
   /* ---------- Conversa ---------- */
@@ -742,7 +748,7 @@ button { cursor: pointer; }
   window.addEventListener("offline", setStatus);
   setStatus();
   $("#chatMode").textContent = "comandos de voz e texto";
-  var VERSION = "5";
+  var VERSION = "6";
   $("#statusText").textContent += " · v" + VERSION;
   function checkUpdate() {
     if (navigator.onLine === false) return;
