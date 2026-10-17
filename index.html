@@ -119,6 +119,7 @@ button { cursor: pointer; }
 .chat { flex: 1; }
 .log { flex: 1; min-height: 200px; max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 2px 4px 10px 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .msg { max-width: 86%; padding: 10px 14px; border-radius: 2px; border: 1px solid var(--line); background: var(--panel-2); overflow-wrap: anywhere; white-space: pre-wrap; }
+.msg a.go { display: flex; align-items: center; justify-content: center; margin-top: 8px; min-height: 44px; padding: 0 16px; background: var(--cyan); color: #04121c; text-decoration: none; font-weight: 600; border-radius: 2px; }
 .msg.me { align-self: flex-end; background: #0f2c42; border-color: var(--cyan-dim); }
 .msg.ai { align-self: flex-start; }
 .msg.err { border-color: var(--danger); color: var(--danger); }
@@ -231,7 +232,7 @@ button { cursor: pointer; }
           <a id="navAtiv" href="https://aluno.triventoeducacao.com.br/atividades/170622" target="_blank" rel="noopener">Atividades</a>
           <a href="https://aluno.triventoeducacao.com.br/" target="_blank" rel="noopener">Notas, aulas e mensagens</a>
         </div>
-        <p class="hint">O NAV pede seu login e não deixa o painel ler os dados dele. Abra por aqui, e anote o que importa em Tarefas, por exemplo: "adicionar tarefa entregar atividade de matemática".</p>
+        <p class="hint">O NAV pede seu login e não deixa o painel ler os dados dele. Diga "abrir atividades" ou "abrir notas". Anote o que importa em Tarefas.</p>
       </div>
       <div class="panel">
         <p class="label">Atalhos</p>
@@ -569,14 +570,35 @@ button { cursor: pointer; }
     out += " " + weatherSay(/noite/.test(kind) ? "amanha" : "");
     return out;
   }
-  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
+  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Para abrir atalhos diga \"abrir YouTube\", \"abrir Gmail\", \"abrir agenda\", \"abrir atividades\", entre outros. Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
+  var SHORTCUTS = [
+    { name: "o Gmail", url: "https://mail.google.com", re: /e-?mail|gmail|correio/ },
+    { name: "a Agenda", url: "https://calendar.google.com", re: /agenda|calendario/ },
+    { name: "o Mapas", url: "https://maps.google.com", re: /\bmapas?\b|\brotas?\b/ },
+    { name: "o YouTube", url: "https://www.youtube.com", re: /you ?tube|videos?/ },
+    { name: "o WhatsApp", url: "https://web.whatsapp.com", re: /whats ?app|zap/ },
+    { name: "o Spotify", url: "https://open.spotify.com", re: /spotify|musicas?/ },
+    { name: "as atividades do NAV", url: "https://aluno.triventoeducacao.com.br/atividades/170622", re: /atividades?|\bnav\b|escola|trivento/ },
+    { name: "o portal do NAV, com notas, aulas e mensagens", url: "https://aluno.triventoeducacao.com.br/", re: /notas?|aulas?|mensagens?|portal/ }
+  ];
+  var pendingLink = null;
+  function openShortcut(n) {
+    var m = n.match(/^(?:por favor\s+)?(?:abrir|abre|abra|abrindo|ir para|ir pro|vai para|va para|ver|mostrar|mostre|me leve para|quero ver)\s+(?:o |a |os |as |meu |minha |minhas |meus |no |na )*(.+)$/);
+    if (!m) return null;
+    var q = m[1], it = SHORTCUTS.filter(function (x) { return x.re.test(q); })[0];
+    if (!it) return "Não conheço esse atalho. Posso abrir Gmail, Agenda, Mapas, YouTube, WhatsApp, Spotify e o NAV (atividades, notas, aulas e mensagens).";
+    pendingLink = it;
+    var w = null; try { w = window.open(it.url, "_blank"); if (w) w.opener = null; } catch (e) { w = null; }
+    return w ? "Abrindo " + it.name + "." : "Pronto. Toque no botão para abrir " + it.name + ".";
+  }
   function handle(text) {
     var n = norm(text).replace(/^\s*(ei |oi |ola )?jarvis[,.!:]?\s*/, "").trim(), m;
     if (!n) return CALL;
+    var op = openShortcut(n); if (op) return op;
     if ((m = n.match(/^(bom dia|boa tarde|boa noite)\b/))) return greet(m[1]);
     if (/\bnav\b|atividades? da escola|aulas? (de|do) hoje|minhas notas|mensagens da escola/.test(n)) {
-      var nb = document.getElementById("navAtiv"); if (nb) { nb.scrollIntoView({ block: "center" }); nb.focus(); }
-      return "O NAV exige login e eu não consigo ler os dados dele daqui. Toque em Atividades, no quadro NAV Aluno, para abrir. Se quiser, diga: adicionar tarefa, e o nome da atividade, para eu lembrar você.";
+      pendingLink = SHORTCUTS[SHORTCUTS.length - 1];
+      return "O NAV exige login e eu não consigo ler os dados dele daqui. Toque no botão para abrir o portal. Se quiser, diga: adicionar tarefa, e o nome da atividade, para eu lembrar você.";
     }
     if (/^(oi|ola|ei|e ai|opa)[,.!?\s]*$/.test(n)) return "Olá, " + NAME + ". Em que posso ajudar?";
     if (/meia hora/.test(n) && /timer|cronometro|alarme|avis|daqui|lembr/.test(n)) { startTimer(30); return "Timer de 30 minutos iniciado."; }
@@ -611,7 +633,7 @@ button { cursor: pointer; }
 
   /* ---------- Conversa ---------- */
   var log = $("#log");
-  [(function () { var h = new Date().getHours(); return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"; })(), "Que horas são?", "Como está o tempo em Lorena?", "Timer de 10 minutos", "O que tenho pendente?"].forEach(function (c) {
+  [(function () { var h = new Date().getHours(); return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"; })(), "Que horas são?", "Como está o tempo em Lorena?", "Timer de 10 minutos", "Abrir YouTube", "O que tenho pendente?"].forEach(function (c) {
     var b = el("button", "chip", c); b.type = "button"; b.addEventListener("click", function () { send(c, false); }); $("#chips").appendChild(b);
   });
   function bubble(kind, text) {
@@ -622,8 +644,13 @@ button { cursor: pointer; }
   function send(text, viaVoice) {
     text = String(text || "").trim(); if (!text) return;
     bubble("me", text);
-    var out = handle(text);
-    bubble("ai", out); say(out, !!viaVoice);
+    pendingLink = null;
+    var out = handle(text), box = bubble("ai", out);
+    if (pendingLink) {
+      var a = el("a", "go", "Abrir " + pendingLink.name.replace(/^(o |a |as |os )/, "")); a.href = pendingLink.url; a.target = "_blank"; a.rel = "noopener";
+      box.appendChild(a); log.scrollTop = log.scrollHeight;
+    }
+    say(out, !!viaVoice);
   }
   $("#form").addEventListener("submit", function (e) { e.preventDefault(); var i = $("#msgInput"), v = i.value; i.value = ""; send(v, false); });
 
