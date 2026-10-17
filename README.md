@@ -32,7 +32,18 @@ O microfone só funciona em https.
 ## Agenda
 
 A agenda fica em `agenda.enc.json`, criptografada (AES-GCM, chave derivada da senha com PBKDF2). O repositório é público, mas só quem tem a senha lê os compromissos. A senha nunca fica no repositório.
-O arquivo é atualizado por quem tem acesso à agenda, não ao vivo. O painel mostra a data da última atualização.
+O arquivo é atualizado automaticamente 3 vezes ao dia (05h, 11h e 17h, horário de Brasília) pelo GitHub Actions, em `.github/workflows/agenda.yml`, usando `scripts/update_agenda.py`.
+O painel mostra a data da última atualização.
+
+### Configuração (uma vez)
+
+1. No Google Agenda (versão para computador): Configurações > clique no seu calendário > Integrar agenda > copie o **Endereço secreto no formato iCal**.
+2. No GitHub: Settings > Secrets and variables > Actions > New repository secret:
+   - `ICAL_URL`: o endereço copiado (vários calendários: separe por espaço)
+   - `AGENDA_PASS`: a senha da agenda, a mesma digitada no painel
+3. Aba Actions > Atualizar agenda > Run workflow, para testar.
+
+O endereço secreto dá acesso de leitura à agenda: nunca o coloque em arquivos do repositório.
 Os lembretes tocam e falam só enquanto o painel está aberto.
 
 ## Limites
