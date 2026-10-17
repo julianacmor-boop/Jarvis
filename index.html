@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060c16">
-<meta name="jarvis-version" content="6">
+<meta name="jarvis-version" content="7">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Jarvis</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -237,14 +237,8 @@ button { cursor: pointer; }
       </div>
       <div class="panel">
         <p class="label">Atalhos</p>
-        <div class="shortcuts">
-          <a href="https://mail.google.com" target="_blank" rel="noopener">Gmail</a>
-          <a href="https://calendar.google.com" target="_blank" rel="noopener">Agenda</a>
-          <a href="https://maps.google.com" target="_blank" rel="noopener">Mapas</a>
-          <a href="https://www.youtube.com" target="_blank" rel="noopener">YouTube</a>
-          <a href="https://web.whatsapp.com" target="_blank" rel="noopener">WhatsApp</a>
-          <a href="https://open.spotify.com" target="_blank" rel="noopener">Spotify</a>
-        </div>
+        <div class="shortcuts" id="shortcutGrid"></div>
+        <p class="hint">No Android, os atalhos abrem direto no app. Se o app não estiver instalado, abrem o site.</p>
       </div>
     </section>
 
@@ -571,17 +565,32 @@ button { cursor: pointer; }
     out += " " + weatherSay(/noite/.test(kind) ? "amanha" : "");
     return out;
   }
-  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Para abrir atalhos diga \"abrir YouTube\", \"abrir Gmail\", \"abrir agenda\", \"abrir atividades\", entre outros. Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
+  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Para abrir apps diga \"abrir YouTube\", \"abrir música\", \"abrir Gmail\", \"abrir agenda\" ou \"abrir atividades\". Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
   var SHORTCUTS = [
-    { name: "o Gmail", url: "https://mail.google.com", re: /e-?mail|gmail|correio/ },
-    { name: "a Agenda", url: "https://calendar.google.com", re: /agenda|calendario/ },
-    { name: "o Mapas", url: "https://maps.google.com", re: /\bmapas?\b|\brotas?\b/ },
-    { name: "o YouTube", url: "https://www.youtube.com", re: /you ?tube|videos?/ },
-    { name: "o WhatsApp", url: "https://web.whatsapp.com", re: /whats ?app|zap/ },
-    { name: "o Spotify", url: "https://open.spotify.com", re: /spotify|musicas?/ },
-    { name: "as atividades do NAV", url: "https://aluno.triventoeducacao.com.br/atividades/170622", re: /atividades?|\bnav\b|escola|trivento/ },
-    { name: "o portal do NAV, com notas, aulas e mensagens", url: "https://aluno.triventoeducacao.com.br/", re: /notas?|aulas?|mensagens?|portal/ }
+    { label: "Gmail", name: "o Gmail", url: "https://mail.google.com", re: /e-?mail|gmail|correio/, pkg: "com.google.android.gm", host: "mail.google.com", path: "/mail/", scheme: "https" },
+    { label: "Agenda", name: "a Agenda", url: "https://calendar.google.com", re: /agenda|calendario/, pkg: "com.google.android.calendar", host: "calendar.google.com", path: "/calendar/", scheme: "https" },
+    { label: "YouTube Music", name: "o YouTube Music", url: "https://music.youtube.com", re: /(you ?tube|you tube) ?music|ytmusic|musicas?/, pkg: "com.google.android.apps.youtube.music", host: "music.youtube.com", path: "/", scheme: "https" },
+    { label: "YouTube", name: "o YouTube", url: "https://www.youtube.com", re: /you ?tube|videos?/, pkg: "com.google.android.youtube", host: "www.youtube.com", path: "/", scheme: "https" },
+    { label: "Mapas", name: "o Mapas", url: "https://maps.google.com", re: /\bmapas?\b|\brotas?\b/, pkg: "com.google.android.apps.maps", host: "maps.google.com", path: "/", scheme: "https" },
+    { label: "WhatsApp", name: "o WhatsApp", url: "https://web.whatsapp.com", re: /whats ?app|zap/, pkg: "com.whatsapp", host: "send", path: "/", scheme: "whatsapp" },
+    { label: "Spotify", name: "o Spotify", url: "https://open.spotify.com", re: /spotify/, pkg: "com.spotify.music", host: "open.spotify.com", path: "/", scheme: "https" },
+    { label: "Atividades do NAV", name: "as atividades do NAV", url: "https://aluno.triventoeducacao.com.br/atividades/170622", re: /atividades?|\bnav\b|escola|trivento/ },
+    { label: "Portal do NAV", name: "o portal do NAV, com notas, aulas e mensagens", url: "https://aluno.triventoeducacao.com.br/", re: /notas?|aulas?|mensagens?|portal/ }
   ];
+  var IS_ANDROID = /Android/i.test(navigator.userAgent);
+  function appHref(it, withFallback) {
+    if (!it.pkg || !IS_ANDROID) return it.url;
+    return "intent://" + it.host + it.path + "#Intent;scheme=" + it.scheme + ";package=" + it.pkg + ";" +
+      (withFallback ? "S.browser_fallback_url=" + encodeURIComponent(it.url) + ";" : "") + "end";
+  }
+  (function renderShortcuts() {
+    var grid = $("#shortcutGrid"); if (!grid) return;
+    SHORTCUTS.filter(function (x) { return x.pkg; }).forEach(function (it) {
+      var a = el("a", null, it.label); a.href = appHref(it, true);
+      if (!(it.pkg && IS_ANDROID)) { a.target = "_blank"; a.rel = "noopener"; }
+      grid.appendChild(a);
+    });
+  })();
   var pendingLink = null;
   var VERB = /^(?:por favor\s+)?(?:abrir|abri|abre|abra|abrindo|acessar|acesse|entrar no|entrar na|entrar em|ir para|ir pro|ir no|ir na|vai para|va para|ver|mostrar|mostre|me leve para|quero ver|quero abrir|iniciar|ligar)\s+(?:o |a |os |as |meu |minha |minhas |meus |no |na |do |da )*(.+)$/;
   var NOT_SHORTCUT = /tarefa|timer|temporizador|cronometro|clima|tempo|chuva|temperatura|previsao|horas|concluir|pendente|voz|escuta|ajuda|comandos/;
@@ -593,8 +602,12 @@ button { cursor: pointer; }
       q = n;
     }
     var it = SHORTCUTS.filter(function (x) { return x.re.test(q); })[0];
-    if (!it) return m ? "Não conheço esse atalho. Posso abrir Gmail, Agenda, Mapas, YouTube, WhatsApp, Spotify e o NAV (atividades, notas, aulas e mensagens)." : null;
+    if (!it) return m ? "Não conheço esse atalho. Posso abrir Gmail, Agenda, YouTube, YouTube Music, Mapas, WhatsApp, Spotify e o NAV (atividades, notas, aulas e mensagens)." : null;
     pendingLink = it;
+    if (it.pkg && IS_ANDROID) {
+      try { location.href = appHref(it, false); } catch (e) {}
+      return "Abrindo " + it.name + " no app. Se ele não abrir, toque no botão.";
+    }
     var w = null; try { w = window.open(it.url, "_blank"); if (w) w.opener = null; } catch (e) { w = null; }
     return w ? "Abrindo " + it.name + "." : "Pronto. Toque no botão para abrir " + it.name + ".";
   }
@@ -654,7 +667,8 @@ button { cursor: pointer; }
     pendingLink = null;
     var out = handle(text), box = bubble("ai", out);
     if (pendingLink) {
-      var a = el("a", "go", "Abrir " + pendingLink.name.replace(/^(o |a |as |os )/, "")); a.href = pendingLink.url; a.target = "_blank"; a.rel = "noopener";
+      var a = el("a", "go", "Abrir " + pendingLink.name.replace(/^(o |a |as |os )/, "")); a.href = appHref(pendingLink, true);
+      if (!(pendingLink.pkg && IS_ANDROID)) { a.target = "_blank"; a.rel = "noopener"; }
       box.appendChild(a); log.scrollTop = log.scrollHeight;
     }
     say(out, !!viaVoice);
@@ -748,7 +762,7 @@ button { cursor: pointer; }
   window.addEventListener("offline", setStatus);
   setStatus();
   $("#chatMode").textContent = "comandos de voz e texto";
-  var VERSION = "6";
+  var VERSION = "7";
   $("#statusText").textContent += " · v" + VERSION;
   function checkUpdate() {
     if (navigator.onLine === false) return;
