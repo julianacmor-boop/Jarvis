@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060c16">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Jarvis</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: HUD de tablet em tela cheia. Tres colunas: relogio e atalhos | conversa | tarefas e timers. Tema escuro unico, de proposito. */
+:root {
+  --bg: #060c16;
+  --panel: #0b1524;
+  --panel-2: #0f1d31;
+  --line: #1c3252;
+  --fg: #dbe8f5;
+  --muted: #8399b2;
+  --cyan: #5fd4ff;
+  --cyan-dim: #1a4f66;
+  --amber: #ffb547;
+  --ok: #5ee0a0;
+  --danger: #ff7a7a;
+  --f-display: "Chakra Petch", "Segoe UI", sans-serif;
+  --f-body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px;
+  box-sizing: border-box;
+  background-image: radial-gradient(1100px 600px at 50% -10%, #0e2540 0%, transparent 70%);
+  background-repeat: no-repeat;
+}
+* { box-sizing: border-box; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto auto 1fr; gap: 12px; min-height: 0; }
+
+/* Cabecalho */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand h1 { font-family: var(--f-display); font-weight: 700; font-size: 1.5rem; letter-spacing: 0.32em; margin: 0; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.status[data-state="on"] .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.status[data-state="local"] .dot { background: var(--amber); }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  min-height: 44px; padding: 0 16px; border: 1px solid var(--line); background: var(--panel);
+  border-radius: 3px; font-family: var(--f-mono); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.btn:hover { border-color: var(--cyan-dim); }
+.btn[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+.btn.primary { background: var(--cyan); color: #04121c; border-color: var(--cyan); font-weight: 500; }
+.btn.primary:hover { filter: brightness(1.08); }
+
+/* Clima: uma faixa com as duas cidades */
+.weather { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.city { flex-direction: row; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 16px; }
+.city .now { display: flex; flex-direction: column; gap: 2px; min-width: 170px; }
+.city .label { margin: 0 0 6px; }
+.city .temp { font-family: var(--f-display); font-size: 2.5rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.city .cond { color: var(--fg); }
+.city .today { font-family: var(--f-mono); font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.city .upd { font-family: var(--f-mono); font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+.city .upd.stale { color: var(--amber); }
+.days { display: flex; gap: 6px; flex: 1; min-width: 0; justify-content: flex-end; flex-wrap: wrap; }
+.day { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 52px; padding: 6px 6px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; font-family: var(--f-mono); font-size: 0.74rem; font-variant-numeric: tabular-nums; }
+.day b { font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.68rem; }
+.day .hi { color: var(--fg); font-size: 0.95rem; }
+.day .lo { color: var(--muted); }
+.day .rain { color: var(--cyan); }
+
+/* Grade principal */
+.grid { display: grid; grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(260px, 330px); gap: 12px; min-height: 0; }
+.col { display: flex; flex-direction: column; gap: 12px; min-height: 0; min-width: 0; }
+
+.panel { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 2px; padding: 14px 16px 16px; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.panel::before, .panel::after { content: ""; position: absolute; width: 12px; height: 12px; border: 0 solid var(--cyan); pointer-events: none; }
+.panel::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+.panel::after { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+.label { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+/* Relogio */
+.clock { align-items: center; text-align: center; }
+.ringwrap { position: relative; width: min(100%, 230px); aspect-ratio: 1; }
+.ring { width: 100%; height: 100%; display: block; }
+.ring .track { fill: none; stroke: var(--line); stroke-width: 3; }
+.ring .arc { fill: none; stroke: var(--cyan); stroke-width: 3; stroke-linecap: round; }
+.ring .tick { stroke: var(--cyan-dim); stroke-width: 1.5; }
+.ring .tick.hr { stroke: var(--muted); stroke-width: 2; }
+.digital { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.digital .hm { font-size: 2.6rem; font-weight: 500; line-height: 1; letter-spacing: 0.02em; }
+.digital .ss { font-size: 1rem; color: var(--cyan); margin-top: 6px; }
+.greeting { font-family: var(--f-display); font-size: 1.15rem; font-weight: 600; margin: 12px 0 2px; }
+.date { color: var(--muted); text-transform: capitalize; margin: 0; }
+.dayline { width: 100%; margin-top: 14px; }
+.bar { height: 6px; background: var(--panel-2); border-radius: 1px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--cyan); }
+.dayline .meta { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 0.72rem; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+
+/* Atalhos */
+.shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.shortcuts a { display: flex; align-items: center; min-height: 48px; padding: 0 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; color: var(--fg); text-decoration: none; font-weight: 500; }
+.shortcuts a:hover { border-color: var(--cyan-dim); color: var(--cyan); }
+
+/* Conversa */
+.chat { flex: 1; }
+.log { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 2px 4px 10px 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.msg { max-width: 86%; padding: 10px 14px; border-radius: 2px; border: 1px solid var(--line); background: var(--panel-2); overflow-wrap: anywhere; white-space: pre-wrap; }
+.msg.me { align-self: flex-end; background: #0f2c42; border-color: var(--cyan-dim); }
+.msg.ai { align-self: flex-start; }
+.msg.err { border-color: var(--danger); color: var(--danger); }
+.msg .who { display: block; font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.msg.me .who { color: var(--cyan); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
+.chip { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); background: transparent; border-radius: 999px; color: var(--muted); font-size: 0.9rem; }
+.chip:hover { color: var(--fg); border-color: var(--cyan-dim); }
+.composer { display: flex; gap: 8px; }
+.composer input { flex: 1; min-width: 0; min-height: 52px; padding: 0 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 2px; font-size: 1.05rem; }
+.composer input:focus { border-color: var(--cyan); outline: none; box-shadow: 0 0 0 2px #5fd4ff33; }
+.composer .btn { min-height: 52px; }
+.hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; }
+
+/* Tarefas e timers */
+.tasks { flex: 1; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; flex: 1; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.task { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 6px 0 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; }
+.task input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--cyan); flex: none; }
+.task span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.task.done span { color: var(--muted); text-decoration: line-through; }
+.x { width: 44px; height: 44px; border: 0; background: transparent; color: var(--muted); font-size: 1.2rem; flex: none; }
+.x:hover { color: var(--danger); }
+.add { display: flex; gap: 8px; margin-top: 10px; }
+.add input { flex: 1; min-width: 0; min-height: 46px; padding: 0 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 2px; }
+.add input:focus { border-color: var(--cyan); outline: none; }
+.add .btn { min-height: 46px; padding: 0 14px; }
+.empty { color: var(--muted); font-size: 0.9rem; padding: 6px 2px; }
+
+.presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.presets .btn { min-height: 44px; padding: 0 14px; }
+.timer { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 4px 10px; padding: 8px 4px 8px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; }
+.timer .name { overflow-wrap: anywhere; }
+.timer .left { font-family: var(--f-mono); font-size: 1.15rem; font-variant-numeric: tabular-nums; color: var(--cyan); }
+.timer .bar { grid-column: 1 / -1; margin: 2px 8px 2px 0; }
+.timer.fired { border-color: var(--amber); animation: pulse 1s ease-in-out infinite; }
+.timer.fired .left { color: var(--amber); }
+.timers-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+@keyframes pulse { 50% { background: #2a2010; } }
+@media (prefers-reduced-motion: reduce) { .timer.fired { animation: none; } * { scroll-behavior: auto !important; } }
+
+/* Tablet em pe e telas estreitas: uma coluna, a pagina rola */
+@media (max-width: 980px) {
+  html, body { height: auto; }
+  .app { height: auto; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .weather { grid-template-columns: minmax(0, 1fr); }
+  .days { justify-content: flex-start; }
+  .chat { min-height: 440px; }
+  .log { max-height: 50vh; }
+  .tasks .list { max-height: 320px; }
+}
+@media (min-width: 981px) and (max-width: 1180px) {
+  .grid { grid-template-columns: minmax(220px, 250px) minmax(0, 1fr) minmax(240px, 280px); }
+  .digital .hm { font-size: 2.1rem; }
+}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>JARVIS</h1>
+      <span class="status" id="status" data-state="off"><span class="dot"></span><span id="statusText">iniciando</span></span>
+    </div>
+    <div class="tools">
+      <button class="btn" id="listenBtn" type="button" aria-pressed="false">Escuta: desligada</button>
+      <button class="btn" id="speakBtn" type="button" aria-pressed="false">Voz: desligada</button>
+      <button class="btn" id="fsBtn" type="button" hidden>Tela cheia</button>
+    </div>
+  </header>
+
+  <section class="weather" id="weather" aria-label="Clima em Guaratinguetá e Lorena"></section>
+
+  <main class="grid">
+    <section class="col" aria-label="Relógio e atalhos">
+      <div class="panel clock">
+        <p class="label" style="align-self:stretch"><span>Agora</span><span id="tz"></span></p>
+        <div class="ringwrap">
+          <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+            <g id="ticks"></g>
+            <circle class="track" cx="120" cy="120" r="100"></circle>
+            <circle class="arc" id="secArc" cx="120" cy="120" r="100" transform="rotate(-90 120 120)" stroke-dasharray="628.3" stroke-dashoffset="628.3"></circle>
+          </svg>
+          <div class="digital" role="timer" aria-label="Hora atual"><span class="hm" id="hm">--:--</span><span class="ss" id="ss">--</span></div>
+        </div>
+        <p class="greeting" id="greeting"></p>
+        <p class="date" id="date"></p>
+        <div class="dayline">
+          <div class="bar"><i id="dayBar"></i></div>
+          <div class="meta"><span id="dayPct">0% do dia</span><span id="dayLeft"></span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="label">Atalhos</p>
+        <div class="shortcuts">
+          <a href="https://mail.google.com" target="_blank" rel="noopener">Gmail</a>
+          <a href="https://calendar.google.com" target="_blank" rel="noopener">Agenda</a>
+          <a href="https://maps.google.com" target="_blank" rel="noopener">Mapas</a>
+          <a href="https://www.youtube.com" target="_blank" rel="noopener">YouTube</a>
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener">WhatsApp</a>
+          <a href="https://open.spotify.com" target="_blank" rel="noopener">Spotify</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel chat" aria-label="Conversa com o Jarvis">
+      <p class="label"><span>Conversa</span><span id="chatMode"></span></p>
+      <div class="log" id="log" aria-live="polite"></div>
+      <div class="chips" id="chips"></div>
+      <form class="composer" id="form" autocomplete="off">
+        <input id="msgInput" type="text" placeholder="Fale ou digite um comando" enterkeyhint="send" aria-label="Mensagem">
+        <button class="btn" id="micBtn" type="button" aria-pressed="false">Falar</button>
+        <button class="btn primary" id="sendBtn" type="submit">Enviar</button>
+      </form>
+      <p class="hint">Toque em Falar e diga o comando. Ou ligue a Escuta e comece com "Jarvis", por exemplo: "Jarvis, timer de 5 minutos".</p>
+    </section>
+
+    <section class="col" aria-label="Tarefas e timers">
+      <div class="panel tasks">
+        <p class="label"><span>Tarefas</span><span id="taskCount"></span></p>
+        <ul class="list" id="taskList"></ul>
+        <form class="add" id="taskForm" autocomplete="off">
+          <input id="taskInput" type="text" placeholder="Nova tarefa" aria-label="Nova tarefa">
+          <button class="btn" type="submit">Incluir</button>
+        </form>
+      </div>
+      <div class="panel">
+        <p class="label">Timers</p>
+        <div class="presets" id="presets">
+          <button class="btn" type="button" data-min="1">1 min</button>
+          <button class="btn" type="button" data-min="5">5 min</button>
+          <button class="btn" type="button" data-min="10">10 min</button>
+          <button class="btn" type="button" data-min="25">25 min</button>
+        </div>
+        <div class="timers-list" id="timers"></div>
+        <p class="empty" id="timersEmpty">Nenhum timer ativo.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  var uid = function () { return Math.random().toString(36).slice(2, 9); };
+  var pad = function (n) { return String(n).padStart(2, "0"); };
+  var norm = function (s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  /* ---------- Relogio ---------- */
+  var ticksG = $("#ticks"), NS = "http://www.w3.org/2000/svg";
+  for (var i = 0; i < 60; i++) {
+    var a = i * 6 * Math.PI / 180, big = i % 5 === 0, r1 = big ? 106 : 109, r2 = 114;
+    var l = document.createElementNS(NS, "line");
+    l.setAttribute("x1", 120 + Math.sin(a) * r1); l.setAttribute("y1", 120 - Math.cos(a) * r1);
+    l.setAttribute("x2", 120 + Math.sin(a) * r2); l.setAttribute("y2", 120 - Math.cos(a) * r2);
+    l.setAttribute("class", "tick" + (big ? " hr" : ""));
+    ticksG.appendChild(l);
+  }
+  var CIRC = 2 * Math.PI * 100;
+  try { $("#tz").textContent = Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g, " "); } catch (e) {}
+
+  function tickClock() {
+    var d = new Date(), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+    $("#hm").textContent = pad(h) + ":" + pad(m);
+    $("#ss").textContent = pad(s);
+    $("#secArc").setAttribute("stroke-dashoffset", String(CIRC * (1 - (s + d.getMilliseconds() / 1000) / 60)));
+    $("#greeting").textContent = (h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite") + ".";
+    $("#date").textContent = d.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+    var secsToday = h * 3600 + m * 60 + s, pct = secsToday / 86400 * 100, left = 86400 - secsToday;
+    $("#dayBar").style.width = pct.toFixed(1) + "%";
+    $("#dayPct").textContent = Math.floor(pct) + "% do dia";
+    $("#dayLeft").textContent = "faltam " + Math.floor(left / 3600) + "h" + pad(Math.floor(left % 3600 / 60));
+    tickTimers();
+  }
+
+  /* ---------- Tarefas ---------- */
+  var tasks = store.get("jarvis.tasks", null);
+  if (!tasks) {
+    tasks = [
+      { id: uid(), text: "Exemplo: revisar e-mails da manhã", done: false },
+      { id: uid(), text: "Exemplo: ligar para o dentista", done: false },
+      { id: uid(), text: "Exemplo: comprar pão", done: true }
+    ];
+    store.set("jarvis.tasks", tasks);
+  }
+  function saveTasks() { store.set("jarvis.tasks", tasks); renderTasks(); }
+  function addTask(text) { text = String(text || "").trim(); if (!text) return null; var t = { id: uid(), text: text.slice(0, 160), done: false }; tasks.unshift(t); saveTasks(); return t; }
+  function renderTasks() {
+    var ul = $("#taskList"); ul.textContent = "";
+    var open = tasks.filter(function (t) { return !t.done; }).length;
+    $("#taskCount").textContent = open + " abertas";
+    if (!tasks.length) { ul.appendChild(el("li", "empty", "Sem tarefas. Inclua uma abaixo ou use a voz.")); return; }
+    tasks.forEach(function (t) {
+      var li = el("li", "task" + (t.done ? " done" : ""));
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = t.done; cb.setAttribute("aria-label", "Concluir: " + t.text);
+      cb.addEventListener("change", function () { t.done = cb.checked; saveTasks(); });
+      var x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "Apagar: " + t.text);
+      x.addEventListener("click", function () { tasks = tasks.filter(function (o) { return o.id !== t.id; }); saveTasks(); });
+      li.appendChild(cb); li.appendChild(el("span", null, t.text)); li.appendChild(x); ul.appendChild(li);
+    });
+  }
+  $("#taskForm").addEventListener("submit", function (e) { e.preventDefault(); var inp = $("#taskInput"); if (addTask(inp.value)) inp.value = ""; });
+
+  /* ---------- Timers ---------- */
+  var timers = store.get("jarvis.timers", []);
+  var audioCtx = null;
+  function wakeAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); } catch (e) {} }
+  function beep() {
+    try {
+      wakeAudio();
+      [0, 0.28, 0.56].forEach(function (off) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "sine"; o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+        var t0 = audioCtx.currentTime + off;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+        o.start(t0); o.stop(t0 + 0.25);
+      });
+    } catch (e) {}
+  }
+  function startTimer(min, label) {
+    min = Number(min); if (!(min > 0) || min > 600) return null;
+    var t = { id: uid(), label: String(label || "").trim().slice(0, 60) || fmtDur(min), end: Date.now() + min * 60000, total: min * 60000, fired: false };
+    timers.push(t); store.set("jarvis.timers", timers); renderTimers(); wakeAudio();
+    return t;
+  }
+  function fmtDur(min) { if (min < 1) return Math.round(min * 60) + " s"; if (min >= 60 && min % 60 === 0) return (min / 60) + " h"; return (Math.round(min * 10) / 10) + " min"; }
+  function fmtLeft(ms) { var s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ":" + pad(m) : pad(m)) + ":" + pad(s % 60); }
+  function renderTimers() {
+    var box = $("#timers"); box.textContent = "";
+    $("#timersEmpty").hidden = timers.length > 0;
+    timers.forEach(function (t) {
+      var d = el("div", "timer" + (t.fired ? " fired" : "")); d.dataset.id = t.id;
+      var x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "Parar timer " + t.label);
+      x.addEventListener("click", function () { timers = timers.filter(function (o) { return o.id !== t.id; }); store.set("jarvis.timers", timers); renderTimers(); });
+      var b = el("div", "bar"); b.appendChild(document.createElement("i"));
+      d.appendChild(el("span", "name", t.label)); d.appendChild(el("span", "left")); d.appendChild(x); d.appendChild(b); box.appendChild(d);
+    });
+    tickTimers();
+  }
+  function tickTimers() {
+    var now = Date.now(), changed = false;
+    timers.forEach(function (t) {
+      var node = document.querySelector('.timer[data-id="' + t.id + '"]'); if (!node) return;
+      var rem = t.end - now;
+      node.querySelector(".left").textContent = rem > 0 ? fmtLeft(rem) : "Fim";
+      node.querySelector(".bar i").style.width = (Math.max(0, Math.min(1, rem / t.total)) * 100) + "%";
+      if (rem <= 0 && !t.fired) { t.fired = true; changed = true; node.classList.add("fired"); beep(); reply("Timer terminou: " + t.label, true); }
+    });
+    if (changed) store.set("jarvis.timers", timers);
+  }
+  $("#presets").addEventListener("click", function (e) { var b = e.target.closest("button[data-min]"); if (b) startTimer(b.dataset.min); });
+
+  /* ---------- Voz (saida) ---------- */
+  var speakOn = false, talking = false, speakBtn = $("#speakBtn");
+  if (!("speechSynthesis" in window)) speakBtn.hidden = true;
+  speakBtn.addEventListener("click", function () {
+    speakOn = !speakOn; speakBtn.setAttribute("aria-pressed", String(speakOn));
+    speakBtn.textContent = "Voz: " + (speakOn ? "ligada" : "desligada");
+    if (!speakOn) { try { speechSynthesis.cancel(); } catch (e) {} talking = false; } else { say("Voz ligada.", true); }
+  });
+  function say(text, force) {
+    if (!speakOn && !force) return;
+    try {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text); u.lang = "pt-BR";
+      u.onstart = function () { talking = true; };
+      u.onend = u.onerror = function () { talking = false; };
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  /* ---------- Tela cheia e tela acesa ---------- */
+  var fsBtn = $("#fsBtn");
+  if (document.documentElement.requestFullscreen) {
+    fsBtn.hidden = false;
+    fsBtn.addEventListener("click", function () {
+      try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(function () {}); } catch (e) {}
+    });
+  }
+  function keepAwake() { try { if (navigator.wakeLock && document.visibilityState === "visible") navigator.wakeLock.request("screen").catch(function () {}); } catch (e) {} }
+  document.addEventListener("visibilitychange", function () { keepAwake(); if (document.visibilityState === "visible") loadWeather(false); });
+  keepAwake();
+
+  /* ---------- Clima ao vivo (Open-Meteo) ---------- */
+  var CITIES = [
+    { id: "guaratingueta", name: "Guaratinguetá", lat: -22.8161, lon: -45.1925 },
+    { id: "lorena", name: "Lorena", lat: -22.7311, lon: -45.1244 }
+  ];
+  var weather = store.get("jarvis.weather", {});
+  var lastFetch = 0;
+  function condPt(code) {
+    if (code === 0) return "Céu limpo"; if (code === 1) return "Predominantemente limpo"; if (code === 2) return "Parcialmente nublado"; if (code === 3) return "Nublado";
+    if (code === 45 || code === 48) return "Neblina"; if (code >= 51 && code <= 57) return "Garoa"; if (code >= 61 && code <= 67) return "Chuva";
+    if (code >= 71 && code <= 77) return "Neve"; if (code >= 80 && code <= 82) return "Pancadas de chuva"; if (code >= 95) return "Trovoadas";
+    return "Sem dados";
+  }
+  function loadWeather(force) {
+    if (!force && Date.now() - lastFetch < 10 * 60000) return;
+    lastFetch = Date.now();
+    CITIES.forEach(function (c) {
+      var url = "https://api.open-meteo.com/v1/forecast?latitude=" + c.lat + "&longitude=" + c.lon +
+        "&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=America%2FSao_Paulo&forecast_days=6";
+      fetch(url).then(function (r) { if (!r.ok) throw new Error("http"); return r.json(); }).then(function (j) {
+        weather[c.id] = {
+          temp: j.current.temperature_2m, code: j.current.weather_code, updatedAt: new Date().toISOString(),
+          daily: j.daily.time.map(function (d, i) { return { date: d, high: j.daily.temperature_2m_max[i], low: j.daily.temperature_2m_min[i], rain: j.daily.precipitation_probability_max[i] }; })
+        };
+        store.set("jarvis.weather", weather); renderWeather();
+      }).catch(function () { renderWeather(); });
+    });
+  }
+  function dayName(iso, i) { if (i === 0) return "Hoje"; return new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""); }
+  function renderWeather() {
+    var box = $("#weather"); box.textContent = "";
+    CITIES.forEach(function (c) {
+      var w = weather[c.id], card = el("div", "panel city"), now = el("div", "now");
+      now.appendChild(el("span", "label", c.name));
+      if (!w) { now.appendChild(el("span", "cond", navigator.onLine === false ? "Sem internet para buscar o clima." : "Buscando o clima...")); card.appendChild(now); box.appendChild(card); return; }
+      now.appendChild(el("span", "temp", Math.round(w.temp) + "°"));
+      now.appendChild(el("span", "cond", condPt(w.code)));
+      var d0 = (w.daily || [])[0];
+      if (d0) now.appendChild(el("span", "today", "máx " + Math.round(d0.high) + "° · mín " + Math.round(d0.low) + "° · chuva " + d0.rain + "%"));
+      var upd = new Date(w.updatedAt), stale = isNaN(upd.getTime()) || (Date.now() - upd.getTime() > 3 * 3600 * 1000);
+      var when = isNaN(upd.getTime()) ? "hora desconhecida" : upd.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      now.appendChild(el("span", "upd" + (stale ? " stale" : ""), (stale ? "Dados antigos, de " : "Atualizado às ") + when));
+      card.appendChild(now);
+      var days = el("div", "days");
+      (w.daily || []).slice(0, 5).forEach(function (d, i) {
+        var x = el("div", "day"); x.appendChild(el("b", null, dayName(d.date, i)));
+        x.appendChild(el("span", "hi", Math.round(d.high) + "°")); x.appendChild(el("span", "lo", Math.round(d.low) + "°")); x.appendChild(el("span", "rain", d.rain + "%"));
+        days.appendChild(x);
+      });
+      card.appendChild(days); box.appendChild(card);
+    });
+  }
+  function weatherSay(n) {
+    var ids = /guara/.test(n) ? ["guaratingueta"] : /lorena/.test(n) ? ["lorena"] : ["guaratingueta", "lorena"];
+    var tmr = /amanha/.test(n), rd = function (v) { return Math.round(v); };
+    return ids.map(function (id) {
+      var c = CITIES.filter(function (x) { return x.id === id; })[0], w = weather[id];
+      if (!w) return c.name + ": ainda sem dados do clima.";
+      var d = (w.daily || [])[tmr ? 1 : 0]; if (!d) return c.name + ": sem previsão.";
+      if (tmr) return c.name + " amanhã: máxima de " + rd(d.high) + ", mínima de " + rd(d.low) + " e " + d.rain + " por cento de chance de chuva.";
+      return c.name + ": " + rd(w.temp) + " graus, " + condPt(w.code).toLowerCase() + ", máxima de " + rd(d.high) + " e " + d.rain + " por cento de chance de chuva.";
+    }).join(" ");
+  }
+
+  /* ---------- Comandos ---------- */
+  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Exemplos: \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
+  function handle(text) {
+    var n = norm(text).replace(/^\s*(ei |oi |ola )?jarvis[,.!:]?\s*/, "").trim(), m;
+    if (!n) return "Pois não?";
+    if (/meia hora/.test(n) && /timer|cronometro|alarme|avis|daqui|lembr/.test(n)) { startTimer(30); return "Timer de 30 minutos iniciado."; }
+    if ((m = n.match(/(\d+(?:[.,]\d+)?)\s*(horas?|h|minutos?|min|segundos?|seg)\b/)) && /timer|cronometro|alarme|avis|daqui|lembr/.test(n)) {
+      var v = parseFloat(m[1].replace(",", ".")), u = m[2].charAt(0), min = u === "h" ? v * 60 : u === "s" ? v / 60 : v;
+      return startTimer(min) ? "Timer de " + fmtDur(min) + " iniciado." : "Não consegui iniciar esse timer.";
+    }
+    if (/(parar|cancelar|apagar|limpar|zerar)\s+(os\s+|todos os\s+)?timers?/.test(n)) { timers = []; store.set("jarvis.timers", timers); renderTimers(); return "Timers cancelados."; }
+    if (/clima|tempo|temperatura|chuva|chover|previsao|frio|calor/.test(n) && !/que horas/.test(n)) { loadWeather(false); return weatherSay(n); }
+    if ((m = n.match(/(?:adicionar|adicione|adiciona|criar|crie|nova|anotar|anote|lembrar de|lembre-?me de|incluir|inclua)\s+(?:uma\s+)?(?:tarefa\s*)?(?::|de |para |que )?\s*(.+)$/))) {
+      var raw = text.slice(m.index + m[0].length - m[1].length).trim();
+      raw = raw.charAt(0).toUpperCase() + raw.slice(1);
+      return addTask(raw) ? "Tarefa incluída: " + raw + "." : "Não entendi a tarefa.";
+    }
+    if ((m = n.match(/(?:concluir|conclua|concluida|terminei|terminar|finalizar|finalize|marcar como feita|feito)\s+(?:a\s+)?(?:tarefa\s*)?(?:de |do |da )?\s*(.+)$/))) {
+      var q = m[1], t = tasks.filter(function (o) { return !o.done && norm(o.text).indexOf(q) >= 0; })[0];
+      if (!t) return "Não achei uma tarefa aberta com \"" + q + "\".";
+      t.done = true; saveTasks(); return "Tarefa concluída: " + t.text + ".";
+    }
+    if (/(limpar|apagar|remover)\s+(as\s+)?(tarefas\s+)?(concluidas|feitas)/.test(n)) { var c0 = tasks.length; tasks = tasks.filter(function (o) { return !o.done; }); saveTasks(); return (c0 - tasks.length) + " tarefas concluídas removidas."; }
+    if (/tarefas|pendente|pendencia|o que (tenho|falta|preciso)/.test(n)) {
+      var o = tasks.filter(function (x) { return !x.done; });
+      return o.length ? "Você tem " + o.length + " pendente" + (o.length > 1 ? "s" : "") + ": " + o.slice(0, 6).map(function (x) { return x.text; }).join("; ") + "." : "Nada pendente.";
+    }
+    if (/(ligar|ativar|liga)\s+(a\s+)?voz/.test(n)) { if (!speakOn) speakBtn.click(); return "Voz ligada."; }
+    if (/(desligar|desativar|desliga)\s+(a\s+)?voz/.test(n)) { if (speakOn) speakBtn.click(); return "Voz desligada."; }
+    if (/que horas|horas sao|hora atual|me diga a hora/.test(n)) return "Agora são " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + ".";
+    if (/que dia|data de hoje|qual a data|dia da semana/.test(n)) return "Hoje é " + new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + ".";
+    if (/ajuda|comandos|o que voce (faz|sabe)|como funciona/.test(n)) return HELP;
+    return "Não entendi. Tente, por exemplo: \"timer de 5 minutos\", \"adicionar tarefa comprar pão\" ou \"como está o tempo em Lorena?\".";
+  }
+
+  /* ---------- Conversa ---------- */
+  var log = $("#log");
+  ["Que horas são?", "Como está o tempo em Lorena?", "Timer de 10 minutos", "O que tenho pendente?"].forEach(function (c) {
+    var b = el("button", "chip", c); b.type = "button"; b.addEventListener("click", function () { send(c, false); }); $("#chips").appendChild(b);
+  });
+  function bubble(kind, text) {
+    var d = el("div", "msg " + kind); d.appendChild(el("span", "who", kind === "me" ? "Você" : "Jarvis")); d.appendChild(el("span", "body", text));
+    log.appendChild(d); log.scrollTop = log.scrollHeight; return d;
+  }
+  function reply(text, speak) { bubble("ai", text); if (speak) say(text, true); else say(text, false); }
+  function send(text, viaVoice) {
+    text = String(text || "").trim(); if (!text) return;
+    bubble("me", text);
+    var out = handle(text);
+    bubble("ai", out); say(out, !!viaVoice);
+  }
+  $("#form").addEventListener("submit", function (e) { e.preventDefault(); var i = $("#msgInput"), v = i.value; i.value = ""; send(v, false); });
+
+  /* ---------- Comando de voz (entrada) ---------- */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var micBtn = $("#micBtn"), listenBtn = $("#listenBtn"), rec = null, oneShot = false, always = false, awaiting = 0;
+  function setMic(on) { oneShot = on; micBtn.setAttribute("aria-pressed", String(on)); micBtn.textContent = on ? "Ouvindo..." : "Falar"; }
+  function setListen(on) { always = on; listenBtn.setAttribute("aria-pressed", String(on)); listenBtn.textContent = "Escuta: " + (on ? "ligada" : "desligada"); }
+  function micDenied() {
+    setMic(false); setListen(false);
+    bubble("ai", "O microfone foi bloqueado. Toque no cadeado ao lado do endereço do site, libere o Microfone e tente de novo. Enquanto isso, use o microfone do teclado.");
+    $("#msgInput").focus();
+  }
+  function startRec(continuous) {
+    if (!SR) { bubble("ai", "Este navegador não tem reconhecimento de voz. Use o Chrome no Android."); setMic(false); setListen(false); return; }
+    try {
+      rec = new SR(); rec.lang = "pt-BR"; rec.interimResults = false; rec.maxAlternatives = 1; rec.continuous = !!continuous;
+      rec.onresult = function (e) {
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+          if (!e.results[i].isFinal) continue;
+          var t = e.results[i][0].transcript.trim(); if (!t || talking) continue;
+          if (continuous) {
+            var n = norm(t);
+            if (/^(ei |oi |ola )?jarvis\b/.test(n)) { var rest = t.replace(/^\s*(ei |oi |olá |ola )?jarvis[,.!:]?\s*/i, ""); if (rest) { awaiting = 0; send(rest, true); } else { awaiting = Date.now() + 8000; bubble("ai", "Pois não?"); say("Pois não?", true); } }
+            else if (awaiting > Date.now()) { awaiting = 0; send(t, true); }
+          } else { send(t, true); }
+        }
+      };
+      rec.onerror = function (e) {
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") micDenied();
+        else if (e.error === "no-speech" && !continuous) { setMic(false); bubble("ai", "Não ouvi nada. Toque em Falar e tente de novo."); }
+      };
+      rec.onend = function () {
+        if (continuous) { if (always) setTimeout(function () { if (always) startRec(true); }, 300); }
+        else setMic(false);
+      };
+      rec.start();
+    } catch (e) { micDenied(); }
+  }
+  micBtn.addEventListener("click", function () {
+    if (always) { bubble("ai", "A escuta contínua está ligada. Diga \"Jarvis\" seguido do comando, ou desligue a escuta."); return; }
+    if (oneShot) { try { rec.stop(); } catch (e) {} return; }
+    setMic(true); startRec(false);
+  });
+  listenBtn.addEventListener("click", function () {
+    if (always) { setListen(false); try { rec.stop(); } catch (e) {} return; }
+    setMic(false); setListen(true); startRec(true);
+    bubble("ai", "Escuta ligada. Diga \"Jarvis\" e o comando, por exemplo: \"Jarvis, timer de 5 minutos\".");
+  });
+  if (!SR) { micBtn.disabled = true; listenBtn.disabled = true; micBtn.title = "Use o Chrome no Android"; }
+
+  /* ---------- Inicio ---------- */
+  function setStatus() { var on = navigator.onLine !== false; $("#status").dataset.state = on ? "on" : "local"; $("#statusText").textContent = on ? "online" : "offline"; }
+  window.addEventListener("online", function () { setStatus(); loadWeather(true); });
+  window.addEventListener("offline", setStatus);
+  setStatus();
+  $("#chatMode").textContent = "comandos de voz e texto";
+  renderTasks(); renderTimers(); renderWeather(); tickClock();
+  setInterval(tickClock, 1000);
+  setInterval(function () { loadWeather(false); renderWeather(); }, 600000);
+  loadWeather(true);
+  bubble("ai", "Pronto. Toque em Falar, ou ligue a Escuta e diga \"Jarvis\" antes do comando. Diga \"ajuda\" para ver o que sei fazer.");
+})();
+</script>
+</body>
+</html>
