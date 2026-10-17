@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060c16">
+<meta name="jarvis-version" content="5">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Jarvis</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -736,11 +737,23 @@ button { cursor: pointer; }
   setMicState("pending"); checkMicPermission();
 
   /* ---------- Inicio ---------- */
-  function setStatus() { var on = navigator.onLine !== false; $("#status").dataset.state = on ? "on" : "local"; $("#statusText").textContent = on ? "online" : "offline"; }
+  function setStatus() { var on = navigator.onLine !== false; $("#status").dataset.state = on ? "on" : "local"; $("#statusText").textContent = (on ? "online" : "offline") + (typeof VERSION !== "undefined" ? " · v" + VERSION : ""); }
   window.addEventListener("online", function () { setStatus(); loadWeather(true); });
   window.addEventListener("offline", setStatus);
   setStatus();
   $("#chatMode").textContent = "comandos de voz e texto";
+  var VERSION = "5";
+  $("#statusText").textContent += " · v" + VERSION;
+  function checkUpdate() {
+    if (navigator.onLine === false) return;
+    fetch(location.pathname + "?check=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
+      var m = t.match(/name="jarvis-version" content="([^"]+)"/);
+      if (!m || m[1] === VERSION) return;
+      if (location.search.indexOf("v=" + m[1]) >= 0) return;
+      location.replace(location.pathname + "?v=" + m[1]);
+    }).catch(function () {});
+  }
+  checkUpdate(); setInterval(checkUpdate, 300000);
   renderTasks(); renderTimers(); renderWeather(); tickClock();
   setInterval(tickClock, 1000);
   setInterval(function () { loadWeather(false); renderWeather(); }, 600000);
