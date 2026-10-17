@@ -225,6 +225,14 @@ button { cursor: pointer; }
           <div class="meta"><span id="dayPct">0% do dia</span><span id="dayLeft"></span></div>
         </div>
       </div>
+      <div class="panel" id="navCard">
+        <p class="label">NAV Aluno</p>
+        <div class="shortcuts">
+          <a id="navAtiv" href="https://aluno.triventoeducacao.com.br/atividades/170622" target="_blank" rel="noopener">Atividades</a>
+          <a href="https://aluno.triventoeducacao.com.br/" target="_blank" rel="noopener">Notas, aulas e mensagens</a>
+        </div>
+        <p class="hint">O NAV pede seu login e não deixa o painel ler os dados dele. Abra por aqui, e anote o que importa em Tarefas, por exemplo: "adicionar tarefa entregar atividade de matemática".</p>
+      </div>
       <div class="panel">
         <p class="label">Atalhos</p>
         <div class="shortcuts">
@@ -566,6 +574,10 @@ button { cursor: pointer; }
     var n = norm(text).replace(/^\s*(ei |oi |ola )?jarvis[,.!:]?\s*/, "").trim(), m;
     if (!n) return CALL;
     if ((m = n.match(/^(bom dia|boa tarde|boa noite)\b/))) return greet(m[1]);
+    if (/\bnav\b|atividades? da escola|aulas? (de|do) hoje|minhas notas|mensagens da escola/.test(n)) {
+      var nb = document.getElementById("navAtiv"); if (nb) { nb.scrollIntoView({ block: "center" }); nb.focus(); }
+      return "O NAV exige login e eu não consigo ler os dados dele daqui. Toque em Atividades, no quadro NAV Aluno, para abrir. Se quiser, diga: adicionar tarefa, e o nome da atividade, para eu lembrar você.";
+    }
     if (/^(oi|ola|ei|e ai|opa)[,.!?\s]*$/.test(n)) return "Olá, " + NAME + ". Em que posso ajudar?";
     if (/meia hora/.test(n) && /timer|cronometro|alarme|avis|daqui|lembr/.test(n)) { startTimer(30); return "Timer de 30 minutos iniciado."; }
     if ((m = n.match(/(\d+(?:[.,]\d+)?)\s*(horas?|h|minutos?|min|segundos?|seg)\b/)) && /timer|cronometro|alarme|avis|daqui|lembr/.test(n)) {
