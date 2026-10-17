@@ -139,6 +139,7 @@ button { cursor: pointer; }
 .pill[data-s="warn"] { color: var(--amber); border-color: var(--amber); }
 .pill[data-s="bad"] { color: var(--danger); border-color: var(--danger); }
 .voicebox summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; color: var(--cyan); font-weight: 500; }
+.voicebox input[type="range"] { flex: 1; min-width: 90px; min-height: 32px; accent-color: var(--cyan); }
 .voicebox ol { margin: 2px 0 6px; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
 .voicebox p { margin: 0; color: var(--muted); font-size: 0.9rem; }
 .voicebox label { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
@@ -260,6 +261,13 @@ button { cursor: pointer; }
           <label for="voiceSel">Voz</label>
           <select id="voiceSel"><option value="">Voz padrão do aparelho</option></select>
           <button class="btn" id="testVoiceBtn" type="button">Testar voz</button>
+        </div>
+        <div class="vrow">
+          <label for="pitchRange">Tom</label>
+          <input id="pitchRange" type="range" min="0.5" max="1.5" step="0.05" value="0.8">
+          <label for="rateRange">Velocidade</label>
+          <input id="rateRange" type="range" min="0.7" max="1.3" step="0.05" value="0.95">
+          <button class="btn" id="jarvisStyleBtn" type="button">Estilo Jarvis</button>
         </div>
       </div>
       <div class="log" id="log" aria-live="polite"></div>
@@ -416,6 +424,8 @@ button { cursor: pointer; }
   /* ---------- Voz (saida) ---------- */
   var speakOn = store.get("jarvis.speak", true), talking = false, speakBtn = $("#speakBtn"), voiceSel = $("#voiceSel"), voices = [];
   var hasTTS = "speechSynthesis" in window;
+  var NAME = "Juliana", RATE = Number(store.get("jarvis.rate", 0.95)), PITCH = Number(store.get("jarvis.pitch", 0.8));
+  var CALL = "Às suas ordens, " + NAME + ".";
   if (!hasTTS) speakBtn.hidden = true;
   function setPill(id, state, text) { var p = $(id); p.dataset.s = state; p.textContent = text; }
   function setSpeak(on) {
@@ -443,12 +453,22 @@ button { cursor: pointer; }
   }
   if (hasTTS) { loadVoices(); try { speechSynthesis.addEventListener("voiceschanged", loadVoices); } catch (e) {} }
   voiceSel.addEventListener("change", function () { store.set("jarvis.voice", voiceSel.value); say("Esta é a voz do Jarvis.", true); });
-  $("#testVoiceBtn").addEventListener("click", function () { say("Olá. Eu sou o Jarvis. Esta é a minha voz.", true); });
+  $("#testVoiceBtn").addEventListener("click", function () { say(CALL, true); });
+  var pitchR = $("#pitchRange"), rateR = $("#rateRange");
+  pitchR.value = PITCH; rateR.value = RATE;
+  pitchR.addEventListener("change", function () { PITCH = Number(pitchR.value); store.set("jarvis.pitch", PITCH); say(CALL, true); });
+  rateR.addEventListener("change", function () { RATE = Number(rateR.value); store.set("jarvis.rate", RATE); say(CALL, true); });
+  $("#jarvisStyleBtn").addEventListener("click", function () {
+    PITCH = 0.8; RATE = 0.95; pitchR.value = PITCH; rateR.value = RATE; store.set("jarvis.pitch", PITCH); store.set("jarvis.rate", RATE);
+    var male = voices.filter(function (v) { return /^pt/i.test(v.lang) && /antonio|felipe|daniel|masculin|male|ptd/i.test(v.name + " " + v.voiceURI); })[0];
+    if (male) { store.set("jarvis.voice", male.name); loadVoices(); }
+    say(CALL, true);
+  });
   function say(text, force) {
     if (!hasTTS || (!speakOn && !force)) return;
     try {
       speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text); u.lang = "pt-BR"; u.rate = 1; u.pitch = 1;
+      var u = new SpeechSynthesisUtterance(text); u.lang = "pt-BR"; u.rate = RATE; u.pitch = PITCH;
       var v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; }
       u.onstart = function () { talking = true; };
       u.onend = u.onerror = function () { talking = false; };
@@ -534,10 +554,19 @@ button { cursor: pointer; }
   }
 
   /* ---------- Comandos ---------- */
-  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Exemplos: \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
+  function greet(kind) {
+    var k = kind.charAt(0).toUpperCase() + kind.slice(1), open = tasks.filter(function (x) { return !x.done; }).length;
+    var out = k + ", " + NAME + ". Agora são " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + ".";
+    out += " " + (open ? "Você tem " + open + (open > 1 ? " tarefas pendentes." : " tarefa pendente.") : "Nenhuma tarefa pendente.");
+    out += " " + weatherSay(/noite/.test(kind) ? "amanha" : "");
+    return out;
+  }
+  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
   function handle(text) {
     var n = norm(text).replace(/^\s*(ei |oi |ola )?jarvis[,.!:]?\s*/, "").trim(), m;
-    if (!n) return "Pois não?";
+    if (!n) return CALL;
+    if ((m = n.match(/^(bom dia|boa tarde|boa noite)\b/))) return greet(m[1]);
+    if (/^(oi|ola|ei|e ai|opa)[,.!?\s]*$/.test(n)) return "Olá, " + NAME + ". Em que posso ajudar?";
     if (/meia hora/.test(n) && /timer|cronometro|alarme|avis|daqui|lembr/.test(n)) { startTimer(30); return "Timer de 30 minutos iniciado."; }
     if ((m = n.match(/(\d+(?:[.,]\d+)?)\s*(horas?|h|minutos?|min|segundos?|seg)\b/)) && /timer|cronometro|alarme|avis|daqui|lembr/.test(n)) {
       var v = parseFloat(m[1].replace(",", ".")), u = m[2].charAt(0), min = u === "h" ? v * 60 : u === "s" ? v / 60 : v;
@@ -570,7 +599,7 @@ button { cursor: pointer; }
 
   /* ---------- Conversa ---------- */
   var log = $("#log");
-  ["Que horas são?", "Como está o tempo em Lorena?", "Timer de 10 minutos", "O que tenho pendente?"].forEach(function (c) {
+  [(function () { var h = new Date().getHours(); return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite"; })(), "Que horas são?", "Como está o tempo em Lorena?", "Timer de 10 minutos", "O que tenho pendente?"].forEach(function (c) {
     var b = el("button", "chip", c); b.type = "button"; b.addEventListener("click", function () { send(c, false); }); $("#chips").appendChild(b);
   });
   function bubble(kind, text) {
@@ -607,7 +636,7 @@ button { cursor: pointer; }
           var t = e.results[i][0].transcript.trim(); if (!t || talking) continue;
           if (continuous) {
             var n = norm(t);
-            if (/^(ei |oi |ola )?jarvis\b/.test(n)) { var rest = t.replace(/^\s*(ei |oi |olá |ola )?jarvis[,.!:]?\s*/i, ""); if (rest) { awaiting = 0; send(rest, true); } else { awaiting = Date.now() + 8000; bubble("ai", "Pois não?"); say("Pois não?", true); } }
+            if (/^((ei|oi|ola|bom dia|boa tarde|boa noite)[,.!]?\s+)?jarvis\b/.test(n)) { var rest = t.replace(/^\s*((ei|oi|olá|ola)[,.!]?\s+)?jarvis[,.!:]?\s*/i, ""); if (rest) { awaiting = 0; send(rest, true); } else { awaiting = Date.now() + 8000; bubble("ai", CALL); say(CALL, true); } }
             else if (awaiting > Date.now()) { awaiting = 0; send(t, true); }
           } else { send(t, true); }
         }
