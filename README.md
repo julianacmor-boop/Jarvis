@@ -10,6 +10,7 @@ Painel de tablet em uma única página (`index.html`), feito para o Chrome no An
 - Comandos de voz em português: "Falar" (um comando) e "Escuta" (diga "Jarvis" antes do comando)
 - Respostas em voz alta, com escolha de voz, tom e velocidade
 - Saudações: "bom dia", "boa tarde", "boa noite"
+- Agenda do Google dos próximos 7 dias, com lembretes por voz (arquivo criptografado, abre com senha)
 - Atalhos que abrem direto no app do Android: Gmail, Agenda, YouTube, YouTube Music, Mapas, WhatsApp e Spotify
 - Atalhos do NAV Aluno (atividades, notas, aulas e mensagens)
 - Confere sozinho se há versão nova e recarrega
@@ -20,6 +21,7 @@ Painel de tablet em uma única página (`index.html`), feito para o Chrome no An
 - "timer de 10 minutos"
 - "adicionar tarefa comprar pão", "concluir tarefa pão"
 - "como está o tempo em Lorena?", "previsão para amanhã"
+- "o que tenho hoje", "o que tenho amanhã", "agenda da semana"
 - "ajuda" lista tudo
 
 ## Publicação
@@ -27,8 +29,14 @@ Painel de tablet em uma única página (`index.html`), feito para o Chrome no An
 GitHub Pages: Settings > Pages > Deploy from a branch > main > / (root).
 O microfone só funciona em https.
 
+## Agenda
+
+A agenda fica em `agenda.enc.json`, criptografada (AES-GCM, chave derivada da senha com PBKDF2). O repositório é público, mas só quem tem a senha lê os compromissos. A senha nunca fica no repositório.
+O arquivo é atualizado por quem tem acesso à agenda, não ao vivo. O painel mostra a data da última atualização.
+Os lembretes tocam e falam só enquanto o painel está aberto.
+
 ## Limites
 
-- O painel não lê o conteúdo do Gmail, da Agenda nem do NAV. Ele só abre os apps e sites.
+- O painel não lê o Gmail nem o NAV, só abre os apps e sites. A Agenda vem do arquivo criptografado, atualizado sob pedido.
 - O Chrome só deixa abrir outro app logo depois de um toque. Por voz, se não abrir sozinho, toque no botão **Abrir** que aparece na conversa.
 - Os atalhos de app dependem do app estar instalado. Sem o app, abre o site.

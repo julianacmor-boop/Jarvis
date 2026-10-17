@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060c16">
-<meta name="jarvis-version" content="7">
+<meta name="jarvis-version" content="8">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Jarvis</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -27,6 +27,7 @@
   --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   color-scheme: dark;
 }
+[hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
 body {
   background: var(--bg);
@@ -134,6 +135,17 @@ button { cursor: pointer; }
 .composer input:focus { border-color: var(--cyan); outline: none; box-shadow: 0 0 0 2px #5fd4ff33; }
 .composer .btn { min-height: 52px; }
 .hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; }
+.agbody { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.agday { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 4px 0 0; }
+.ev { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 2px 10px; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; color: var(--fg); text-decoration: none; }
+.ev:hover { border-color: var(--cyan-dim); }
+.ev .t { font-family: var(--f-mono); font-size: 0.8rem; color: var(--cyan); font-variant-numeric: tabular-nums; }
+.ev .n { overflow-wrap: anywhere; }
+.ev .l { grid-column: 2; color: var(--muted); font-size: 0.82rem; overflow-wrap: anywhere; }
+#agStamp.stale { color: var(--amber); }
+#agendaCard .add { margin-top: 8px; }
+#agendaCard .shortcuts { margin-top: 10px; }
+#agendaCard .shortcuts button { min-height: 48px; padding: 0 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 2px; text-align: left; font-weight: 500; }
 .voicebox { border: 1px solid var(--line); background: var(--panel-2); padding: 10px 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
 .vrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .pill { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.04em; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
@@ -225,6 +237,18 @@ button { cursor: pointer; }
         <div class="dayline">
           <div class="bar"><i id="dayBar"></i></div>
           <div class="meta"><span id="dayPct">0% do dia</span><span id="dayLeft"></span></div>
+        </div>
+      </div>
+      <div class="panel" id="agendaCard">
+        <p class="label"><span>Agenda</span><span id="agStamp"></span></p>
+        <div class="agbody" id="agBody"><p class="empty">Carregando a agenda...</p></div>
+        <form class="add" id="agPassForm" autocomplete="off" hidden>
+          <input id="agPass" type="password" placeholder="Senha da agenda" aria-label="Senha da agenda" autocomplete="off">
+          <button class="btn" type="submit">Destravar</button>
+        </form>
+        <div class="shortcuts">
+          <a id="agWeek" href="https://calendar.google.com/calendar/">Abrir semana</a>
+          <button id="agLock" type="button">Trocar senha</button>
         </div>
       </div>
       <div class="panel" id="navCard">
@@ -562,10 +586,11 @@ button { cursor: pointer; }
     var k = kind.charAt(0).toUpperCase() + kind.slice(1), open = tasks.filter(function (x) { return !x.done; }).length;
     var out = k + ", " + NAME + ". Agora são " + new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + ".";
     out += " " + (open ? "Você tem " + open + (open > 1 ? " tarefas pendentes." : " tarefa pendente.") : "Nenhuma tarefa pendente.");
+    if (agData) out += " " + agendaSay(/noite/.test(kind) ? 1 : 0);
     out += " " + weatherSay(/noite/.test(kind) ? "amanha" : "");
     return out;
   }
-  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Para abrir apps diga \"abrir YouTube\", \"abrir música\", \"abrir Gmail\", \"abrir agenda\" ou \"abrir atividades\". Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
+  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Para a agenda diga \"o que tenho hoje\", \"o que tenho amanhã\" ou \"agenda da semana\". Para abrir apps diga \"abrir YouTube\", \"abrir música\", \"abrir Gmail\", \"abrir agenda\" ou \"abrir atividades\". Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
   var SHORTCUTS = [
     { label: "Gmail", name: "o Gmail", url: "https://mail.google.com", re: /e-?mail|gmail|correio/, pkg: "com.google.android.gm", host: "mail.google.com", path: "/mail/", scheme: "https" },
     { label: "Agenda", name: "a Agenda", url: "https://calendar.google.com", re: /agenda|calendario/, pkg: "com.google.android.calendar", host: "calendar.google.com", path: "/calendar/", scheme: "https" },
@@ -593,7 +618,7 @@ button { cursor: pointer; }
   })();
   var pendingLink = null;
   var VERB = /^(?:por favor\s+)?(?:abrir|abri|abre|abra|abrindo|acessar|acesse|entrar no|entrar na|entrar em|ir para|ir pro|ir no|ir na|vai para|va para|ver|mostrar|mostre|me leve para|quero ver|quero abrir|iniciar|ligar)\s+(?:o |a |os |as |meu |minha |minhas |meus |no |na |do |da )*(.+)$/;
-  var NOT_SHORTCUT = /tarefa|timer|temporizador|cronometro|clima|tempo|chuva|temperatura|previsao|horas|concluir|pendente|voz|escuta|ajuda|comandos/;
+  var NOT_SHORTCUT = /hoje|amanha|compromisso|reuniao|lembrete|semana|tenho|tarefa|timer|temporizador|cronometro|clima|tempo|chuva|temperatura|previsao|horas|concluir|pendente|voz|escuta|ajuda|comandos/;
   function openShortcut(n) {
     var m = n.match(VERB), q;
     if (m) q = m[1];
@@ -615,6 +640,7 @@ button { cursor: pointer; }
     var n = norm(text).replace(/^\s*(ei |oi |ola )?jarvis[,.!:]?\s*/, "").trim(), m;
     if (!n) return CALL;
     var op = openShortcut(n); if (op) return op;
+    if (/compromisso|reuniao|lembrete|agenda|o que tenho (hoje|amanha|na semana)|semana/.test(n) && !/timer|tarefa|abrir/.test(n)) return agendaSay(/amanha/.test(n) ? 1 : /semana/.test(n) ? 2 : 0);
     if ((m = n.match(/^(bom dia|boa tarde|boa noite)\b/))) return greet(m[1]);
     if (/\bnav\b|atividades? da escola|aulas? (de|do) hoje|minhas notas|mensagens da escola/.test(n)) {
       pendingLink = SHORTCUTS[SHORTCUTS.length - 1];
@@ -762,7 +788,103 @@ button { cursor: pointer; }
   window.addEventListener("offline", setStatus);
   setStatus();
   $("#chatMode").textContent = "comandos de voz e texto";
-  var VERSION = "7";
+  /* ---------- Agenda (arquivo criptografado no repositório) ---------- */
+  var agData = store.get("jarvis.agenda", null), agPassKey = "jarvis.agpass";
+  function dayKey(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function evStart(ev) { return ev.allDay ? new Date(String(ev.start).slice(0, 10) + "T00:00:00") : new Date(ev.start); }
+  function evEnd(ev) { return ev.allDay ? new Date(String(ev.end || ev.start).slice(0, 10) + "T00:00:00") : new Date(ev.end || ev.start); }
+  function hhmm(x) { return new Date(x).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); }
+  function evTime(ev) { return ev.allDay ? "Dia todo" : hhmm(ev.start) + (ev.end ? "–" + hhmm(ev.end) : ""); }
+  function today0() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+  function agDayIndex(ev) {
+    var s = evStart(ev), t0 = today0(); if (s < t0) s = t0;
+    return Math.round((new Date(dayKey(s) + "T00:00:00") - t0) / 86400000);
+  }
+  function upcoming(maxDays) {
+    var now = new Date();
+    return (agData && agData.events || []).filter(function (ev) {
+      var e = evEnd(ev), i = agDayIndex(ev);
+      return (ev.allDay ? e > today0() : e > now) && i >= 0 && i < maxDays;
+    }).sort(function (a, b) { return evStart(a) - evStart(b); });
+  }
+  function dayTitle(i) { if (i === 0) return "Hoje"; if (i === 1) return "Amanhã"; var d = today0(); d.setDate(d.getDate() + i); return d.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "numeric" }); }
+  function agNote(text) { var b = $("#agBody"); b.textContent = ""; b.appendChild(el("p", "empty", text)); }
+  function renderAgenda() {
+    var wk = $("#agWeek"), t = new Date();
+    wk.href = appHref({ pkg: "com.google.android.calendar", host: "calendar.google.com", path: "/calendar/", scheme: "https", url: "https://calendar.google.com/calendar/u/0/r/week/" + t.getFullYear() + "/" + (t.getMonth() + 1) + "/" + t.getDate() }, true);
+    if (!(IS_ANDROID)) { wk.target = "_blank"; wk.rel = "noopener"; }
+    var stamp = $("#agStamp"), pass = store.get(agPassKey, "");
+    if (!agData) { stamp.textContent = ""; stamp.classList.remove("stale"); $("#agPassForm").hidden = !!pass; if (!pass) agNote("Digite a senha da agenda para ver seus compromissos."); return; }
+    var g = new Date(agData.generatedAt), old = isNaN(g.getTime()) || Date.now() - g.getTime() > 24 * 3600 * 1000;
+    stamp.textContent = isNaN(g.getTime()) ? "" : (old ? "desatualizada, de " : "atualizada ") + g.toLocaleDateString("pt-BR", { day: "numeric", month: "numeric" }) + " " + hhmm(g);
+    stamp.classList.toggle("stale", old);
+    var box = $("#agBody"); box.textContent = "";
+    var list = upcoming(7); $("#agPassForm").hidden = true;
+    if (!list.length) { box.appendChild(el("p", "empty", "Nenhum compromisso nos próximos 7 dias.")); return; }
+    var last = -1;
+    list.forEach(function (ev) {
+      var i = agDayIndex(ev);
+      if (i !== last) { box.appendChild(el("p", "agday", dayTitle(i))); last = i; }
+      var a = el("a", "ev"); if (ev.link) { a.href = ev.link; a.target = "_blank"; a.rel = "noopener"; }
+      a.appendChild(el("span", "t", evTime(ev))); a.appendChild(el("span", "n", ev.title || "Sem título"));
+      if (ev.location) a.appendChild(el("span", "l", ev.location));
+      box.appendChild(a);
+    });
+  }
+  async function decryptAgenda(pass) {
+    var r = await fetch("agenda.enc.json?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error("nofile");
+    var j = await r.json(), un = function (x) { return Uint8Array.from(atob(x), function (c) { return c.charCodeAt(0); }); };
+    var km = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+    var key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: un(j.salt), iterations: j.iter, hash: "SHA-256" }, km, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    var pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: un(j.iv) }, key, un(j.data));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+  async function loadAgenda() {
+    var pass = store.get(agPassKey, "");
+    if (!pass) { renderAgenda(); return; }
+    try { agData = await decryptAgenda(pass); store.set("jarvis.agenda", agData); renderAgenda(); checkReminders(); }
+    catch (e) {
+      if (e && e.name === "OperationError") { store.set(agPassKey, ""); agData = null; store.set("jarvis.agenda", null); renderAgenda(); $("#agPassForm").hidden = false; agNote("Senha incorreta. Digite de novo."); }
+      else if (agData) renderAgenda();
+      else agNote("Não consegui carregar a agenda agora. Confira a internet e atualize a página.");
+    }
+  }
+  $("#agPassForm").addEventListener("submit", function (e) { e.preventDefault(); var v = $("#agPass").value.trim(); if (!v) return; store.set(agPassKey, v); $("#agPass").value = ""; agNote("Abrindo a agenda..."); loadAgenda(); });
+  $("#agLock").addEventListener("click", function () { store.set(agPassKey, ""); agData = null; store.set("jarvis.agenda", null); $("#agPassForm").hidden = false; renderAgenda(); $("#agPass").focus(); });
+  function agendaSay(day) {
+    if (!agData) return "A agenda ainda não foi carregada. Digite a senha no quadro Agenda.";
+    var list = upcoming(day === 2 ? 7 : day + 1).filter(function (ev) { return day === 2 || agDayIndex(ev) === day; });
+    var when = day === 0 ? "hoje" : day === 1 ? "amanhã" : "nos próximos 7 dias";
+    if (!list.length) return "Você não tem compromissos " + when + ".";
+    return "Você tem " + list.length + (list.length > 1 ? " compromissos " : " compromisso ") + when + ": " +
+      list.slice(0, 6).map(function (ev) {
+        var d = day === 2 ? dayTitle(agDayIndex(ev)).toLowerCase() + ", " : "";
+        return d + (ev.title || "Sem título") + (ev.allDay ? ", o dia todo" : " às " + hhmm(ev.start));
+      }).join("; ") + ".";
+  }
+  function checkReminders() {
+    if (!agData) return;
+    var now = Date.now(), fired = store.get("jarvis.fired", {}), changed = false;
+    Object.keys(fired).forEach(function (k) { if (now - fired[k] > 3 * 86400000) { delete fired[k]; changed = true; } });
+    (agData.events || []).forEach(function (ev) {
+      if (ev.allDay) return;
+      var s = +evStart(ev); if (!(s > now)) return;
+      var due = (ev.reminders || []).filter(function (m) { return s - m * 60000 <= now; });
+      if (!due.length) return;
+      var keys = due.map(function (m) { return ev.id + "|" + ev.start + "|" + m; });
+      if (keys.every(function (k) { return fired[k]; })) return;
+      keys.forEach(function (k) { fired[k] = now; }); changed = true;
+      var mins = Math.max(1, Math.round((s - now) / 60000));
+      var falta = mins >= 1440 ? "em " + Math.round(mins / 1440) + (Math.round(mins / 1440) > 1 ? " dias" : " dia") : mins >= 60 ? "em " + Math.floor(mins / 60) + " h" + (mins % 60 ? " e " + (mins % 60) + " min" : "") : "em " + mins + " min";
+      var msg = "Lembrete, " + NAME + ": " + (ev.title || "compromisso") + " começa " + falta + ", às " + hhmm(ev.start) + "." + (ev.location ? " Local: " + ev.location + "." : "");
+      beep(); reply(msg, true);
+    });
+    if (changed) store.set("jarvis.fired", fired);
+  }
+  setInterval(checkReminders, 30000);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { loadAgenda(); } });
+  var VERSION = "8";
   $("#statusText").textContent += " · v" + VERSION;
   function checkUpdate() {
     if (navigator.onLine === false) return;
@@ -774,6 +896,7 @@ button { cursor: pointer; }
     }).catch(function () {});
   }
   checkUpdate(); setInterval(checkUpdate, 300000);
+  renderAgenda(); loadAgenda(); setInterval(loadAgenda, 900000); setTimeout(checkReminders, 4000);
   renderTasks(); renderTimers(); renderWeather(); tickClock();
   setInterval(tickClock, 1000);
   setInterval(function () { loadWeather(false); renderWeather(); }, 600000);
