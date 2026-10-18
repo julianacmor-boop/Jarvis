@@ -56,3 +56,7 @@ Os lembretes tocam e falam só enquanto o painel está aberto.
 
 O quadro "Notícias do dia" lê `news.json` (público, sem criptografia). Comandos de voz: "notícias do dia", "notícias do Brasil", "notícias do mundo", "manchetes".
 Fontes: Agência Brasil, CNN Brasil e Euronews (Globo e UOL bloqueiam a leitura automática). Para renovar, peça no Claude "atualiza as notícias".
+
+## Tela principal (v11)
+
+Orbe central animado (muda quando está ouvindo ou falando) e atalhos pequenos dos dois lados. Painéis (clima, notícias, agenda, tarefas, timers, conversa e ajustes de voz) ficam abaixo, rolando a página.

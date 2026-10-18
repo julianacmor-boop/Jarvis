@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060c16">
-<meta name="jarvis-version" content="10">
+<meta name="jarvis-version" content="11">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Jarvis</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -47,7 +47,6 @@ button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-.app { min-height: 100%; display: grid; grid-template-rows: auto auto 1fr; gap: 12px; }
 
 /* Cabecalho */
 .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -186,6 +185,63 @@ button { cursor: pointer; }
 @keyframes pulse { 50% { background: #2a2010; } }
 @media (prefers-reduced-motion: reduce) { .timer.fired { animation: none; } * { scroll-behavior: auto !important; } }
 
+
+/* Tela principal: orbe central e atalhos pequenos dos dois lados */
+.app { min-height: 100%; display: flex; flex-direction: column; gap: 12px; }
+.stage { display: grid; grid-template-columns: minmax(180px, 230px) minmax(0, 1fr) minmax(180px, 230px); gap: 12px; min-height: calc(100vh - 84px); }
+.rail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; }
+.tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-height: 64px; padding: 6px 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 2px; color: var(--fg); text-decoration: none; font-size: 0.74rem; font-weight: 500; text-align: center; line-height: 1.15; }
+.tile::before { content: ""; position: absolute; top: -1px; left: -1px; width: 8px; height: 8px; border-top: 2px solid var(--cyan-dim); border-left: 2px solid var(--cyan-dim); }
+.tile svg { width: 26px; height: 26px; stroke: var(--cyan); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.tile:hover, .tile:active { border-color: var(--cyan); background: var(--panel-2); }
+.tile.wide { grid-column: 1 / -1; }
+.core { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; min-width: 0; padding: 4px 0; }
+.orb { position: relative; width: min(100%, 38vh, 380px); aspect-ratio: 1; }
+.orb .ring { width: 100%; height: 100%; display: block; overflow: visible; }
+.orb .d1 { fill: none; stroke: var(--cyan-dim); stroke-width: 1; stroke-dasharray: 3 7; }
+.orb .d2 { fill: none; stroke: var(--cyan); stroke-width: 1.2; stroke-dasharray: 40 14 4 14; opacity: .7; }
+.orb .d3 { fill: none; stroke: var(--cyan-dim); stroke-width: 2; stroke-dasharray: 2 9; }
+.orb .spin { transform-box: fill-box; transform-origin: center; animation: spin 40s linear infinite; }
+.orb .spin.slow { animation-duration: 90s; }
+.orb .spin.rev { animation-direction: reverse; animation-duration: 28s; }
+.orb .glow { transform-box: fill-box; transform-origin: center; animation: breathe 5s ease-in-out infinite; }
+.orb[data-state="listen"] .spin { animation-duration: 8s; }
+.orb[data-state="listen"] .glow { animation-duration: 1.4s; }
+.orb[data-state="listen"] .d2, .orb[data-state="listen"] .arc { stroke: var(--ok); }
+.orb[data-state="talk"] .glow { animation: talk .7s ease-in-out infinite; }
+.orb[data-state="talk"] .spin { animation-duration: 14s; }
+.orb .digital .hm { font-size: clamp(1.9rem, 7vh, 3.4rem); }
+.orb .digital .ss { font-size: clamp(.85rem, 2.4vh, 1.1rem); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes breathe { 50% { transform: scale(1.12); opacity: .75; } }
+@keyframes talk { 50% { transform: scale(1.22); opacity: 1; } }
+.core .greeting { margin: 4px 0 0; }
+.core .date { font-size: .9rem; text-transform: none; }
+.core .date #date::first-letter { text-transform: uppercase; }
+.core .date #tz, .core .date #tz + * { display: none; }
+.core .greeting { font-size: 1.05rem; }
+.core .dayline { max-width: 340px; margin-top: 4px; }
+.heard { margin: 4px 0 0; min-height: 1.2em; font-family: var(--f-mono); font-size: .76rem; color: var(--cyan); max-width: 90%; overflow-wrap: anywhere; }
+.caption { max-width: min(560px, 100%); max-height: 5.6em; overflow-y: auto; padding: 8px 14px; border: 1px solid var(--line); background: var(--panel); border-radius: 2px; font-size: 1rem; line-height: 1.4; overflow-wrap: anywhere; scrollbar-width: thin; }
+.capact:empty { display: none; }
+.capact a.go { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; background: var(--cyan); color: #04121c; text-decoration: none; font-weight: 600; border-radius: 2px; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.btn.big { min-height: 52px; padding: 0 28px; font-size: .95rem; }
+.core .composer { width: min(560px, 100%); }
+.core .composer input { min-height: 46px; }
+.core .composer .btn { min-height: 46px; }
+@media (min-width: 981px) and (max-height: 720px) { .dayline, .heard { display: none; } .core { gap: 4px; } .caption { max-height: 3.4em; } }
+@media (prefers-reduced-motion: reduce) { .orb .spin, .orb .glow { animation: none !important; } }
+@media (max-width: 980px) {
+  .stage { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .core { order: 1; }
+  #railL { order: 2; } #railR { order: 3; }
+  .rail { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: auto; }
+  .tile { min-height: 78px; }
+  .tile.wide { grid-column: auto; }
+  .orb { width: min(80vw, 380px); }
+}
+
 /* Tablet em pe e telas estreitas: uma coluna, a pagina rola */
 @media (max-width: 980px) {
   html, body { height: auto; }
@@ -218,27 +274,47 @@ button { cursor: pointer; }
     </div>
   </header>
 
+  <section class="stage" aria-label="Tela principal">
+    <nav class="rail" id="railL" aria-label="Atalhos à esquerda"></nav>
+    <div class="core">
+      <div class="orb" id="orb" data-state="idle">
+        <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+          <defs><radialGradient id="coreGlow"><stop offset="0" stop-color="#5fd4ff" stop-opacity=".38"/><stop offset="1" stop-color="#5fd4ff" stop-opacity="0"/></radialGradient></defs>
+          <circle class="glow" cx="120" cy="120" r="86" fill="url(#coreGlow)"></circle>
+          <g class="spin slow"><circle class="d1" cx="120" cy="120" r="118"></circle></g>
+          <g id="ticks"></g>
+          <circle class="track" cx="120" cy="120" r="100"></circle>
+          <circle class="arc" id="secArc" cx="120" cy="120" r="100" transform="rotate(-90 120 120)" stroke-dasharray="628.3" stroke-dashoffset="628.3"></circle>
+          <g class="spin rev"><circle class="d2" cx="120" cy="120" r="88"></circle></g>
+          <g class="spin"><circle class="d3" cx="120" cy="120" r="76"></circle></g>
+        </svg>
+        <div class="digital" role="timer" aria-label="Hora atual"><span class="hm" id="hm">--:--</span><span class="ss" id="ss">--</span></div>
+      </div>
+      <p class="greeting" id="greeting"></p>
+      <p class="date"><span id="date"></span><span id="tz" hidden></span></p>
+      <div class="dayline">
+        <div class="bar"><i id="dayBar"></i></div>
+        <div class="meta"><span id="dayPct">0% do dia</span><span id="dayLeft"></span></div>
+      </div>
+      <p class="heard" id="heard"></p>
+      <div class="caption" id="caption" aria-live="polite">Diga "Jarvis" ou toque em Falar.</div>
+      <div class="capact" id="capAct"></div>
+      <div class="controls">
+        <button class="btn primary big" id="micBtn" type="button" aria-pressed="false">Falar</button>
+        <button class="btn" id="stageEnable" type="button">Ativar voz e microfone</button>
+      </div>
+      <form class="composer" id="form" autocomplete="off">
+        <input id="msgInput" type="text" placeholder="Ou digite um comando" enterkeyhint="send" aria-label="Mensagem">
+        <button class="btn primary" id="sendBtn" type="submit">Enviar</button>
+      </form>
+    </div>
+    <nav class="rail" id="railR" aria-label="Atalhos à direita"></nav>
+  </section>
+
   <section class="weather" id="weather" aria-label="Clima em Guaratinguetá e Lorena"></section>
 
   <main class="grid">
-    <section class="col" aria-label="Relógio e atalhos">
-      <div class="panel clock">
-        <p class="label" style="align-self:stretch"><span>Agora</span><span id="tz"></span></p>
-        <div class="ringwrap">
-          <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
-            <g id="ticks"></g>
-            <circle class="track" cx="120" cy="120" r="100"></circle>
-            <circle class="arc" id="secArc" cx="120" cy="120" r="100" transform="rotate(-90 120 120)" stroke-dasharray="628.3" stroke-dashoffset="628.3"></circle>
-          </svg>
-          <div class="digital" role="timer" aria-label="Hora atual"><span class="hm" id="hm">--:--</span><span class="ss" id="ss">--</span></div>
-        </div>
-        <p class="greeting" id="greeting"></p>
-        <p class="date" id="date"></p>
-        <div class="dayline">
-          <div class="bar"><i id="dayBar"></i></div>
-          <div class="meta"><span id="dayPct">0% do dia</span><span id="dayLeft"></span></div>
-        </div>
-      </div>
+    <section class="col" aria-label="Notícias e agenda">
       <div class="panel" id="newsCard">
         <p class="label"><span>Notícias do dia</span><span id="nwStamp"></span></p>
         <div class="agbody" id="nwBody"><p class="empty">Carregando as notícias...</p></div>
@@ -255,23 +331,10 @@ button { cursor: pointer; }
           <button id="agLock" type="button">Trocar senha</button>
         </div>
       </div>
-      <div class="panel" id="navCard">
-        <p class="label">NAV Aluno</p>
-        <div class="shortcuts">
-          <a id="navAtiv" href="https://aluno.triventoeducacao.com.br/atividades/170622" target="_blank" rel="noopener">Atividades</a>
-          <a href="https://aluno.triventoeducacao.com.br/" target="_blank" rel="noopener">Notas, aulas e mensagens</a>
-        </div>
-        <p class="hint">O NAV pede seu login e não deixa o painel ler os dados dele. Diga "abrir atividades" ou "abrir notas". Anote o que importa em Tarefas.</p>
-      </div>
-      <div class="panel">
-        <p class="label">Atalhos</p>
-        <div class="shortcuts" id="shortcutGrid"></div>
-        <p class="hint">No Android, os atalhos abrem direto no app. Se o app não estiver instalado, abrem o site.</p>
-      </div>
     </section>
 
     <section class="panel chat" aria-label="Conversa com o Jarvis">
-      <p class="label"><span>Conversa</span><span id="chatMode"></span></p>
+      <p class="label"><span>Conversa e voz</span><span id="chatMode"></span></p>
       <div class="voicebox" id="voiceBox">
         <div class="vrow">
           <button class="btn primary" id="enableVoiceBtn" type="button">Ativar voz e microfone</button>
@@ -304,11 +367,6 @@ button { cursor: pointer; }
       </div>
       <div class="log" id="log" aria-live="polite"></div>
       <div class="chips" id="chips"></div>
-      <form class="composer" id="form" autocomplete="off">
-        <input id="msgInput" type="text" placeholder="Fale ou digite um comando" enterkeyhint="send" aria-label="Mensagem">
-        <button class="btn" id="micBtn" type="button" aria-pressed="false">Falar</button>
-        <button class="btn primary" id="sendBtn" type="submit">Enviar</button>
-      </form>
       <p class="hint">Toque em Falar e diga o comando. Ou ligue a Escuta e comece com "Jarvis", por exemplo: "Jarvis, timer de 5 minutos".</p>
     </section>
 
@@ -624,13 +682,39 @@ button { cursor: pointer; }
     return "intent://" + it.host + it.path + "#Intent;scheme=" + it.scheme + ";package=" + it.pkg + ";" +
       (withFallback ? "S.browser_fallback_url=" + encodeURIComponent(it.url) + ";" : "") + "end";
   }
+  var ICONS = {
+    "Gmail": '<rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 7l9 6 9-6"/>',
+    "Agenda": '<rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    "YouTube Music": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>',
+    "YouTube": '<rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M10 9.5l5 2.5-5 2.5z"/>',
+    "Mapas": '<path d="M12 21s-6-5.5-6-10a6 6 0 0112 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>',
+    "WhatsApp": '<path d="M4 5h16v11H9l-5 4z"/>',
+    "Spotify": '<circle cx="12" cy="12" r="9"/><path d="M7 9.5c3.5-1 7-.7 10 1M7.5 13c3-.7 6-.4 8.5 1M8 16c2.4-.5 4.5-.3 6.3.6"/>',
+    "Chrome": '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+    "Fotos": '<rect x="3" y="4" width="18" height="16" rx="1.5"/><circle cx="9" cy="10" r="1.6"/><path d="M3 17l5-4 4 3 3-2 6 4"/>',
+    "Drive": '<path d="M3 7h6l2 2h10v10H3z"/>',
+    "Meet": '<rect x="3" y="6" width="12" height="12" rx="1.5"/><path d="M15 11l6-3v8l-6-3z"/>',
+    "Classroom": '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c3 2.5 9 2.5 12 0v-4.5"/>',
+    "Keep (notas)": '<path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.5.4.5 1.1.5 1.6h6c0-.5 0-1.2.5-1.6A6 6 0 0012 3z"/>',
+    "Play Store": '<path d="M5 3l14 9-14 9z"/>',
+    "Instagram": '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r=".6"/>',
+    "Netflix": '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M4 8h16M4 16h16M9 3v18M15 3v18"/>',
+    "Configurações": '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+    "Atividades do NAV": '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',
+    "Portal do NAV": '<path d="M4 5c3-1 6-1 8 1 2-2 5-2 8-1v14c-3-1-6-1-8 1-2-2-5-2-8-1z"/><path d="M12 6v14"/>'
+  };
+  var SHORT = { "Atividades do NAV": "Atividades NAV", "Portal do NAV": "Notas e aulas", "Keep (notas)": "Keep" };
+  var LEFT = ["Gmail", "Agenda", "WhatsApp", "Meet", "Classroom", "Atividades do NAV", "Portal do NAV", "Keep (notas)", "Drive", "Mapas"];
   (function renderShortcuts() {
-    var grid = $("#shortcutGrid"); if (!grid) return;
-    SHORTCUTS.filter(function (x) { return x.pkg; }).forEach(function (it) {
-      var a = el("a", null, it.label); a.href = appHref(it, true);
+    var L = $("#railL"), R = $("#railR"); if (!L || !R) return;
+    SHORTCUTS.forEach(function (it) {
+      var a = el("a", "tile"); a.href = appHref(it, true);
       if (!(it.pkg && IS_ANDROID)) { a.target = "_blank"; a.rel = "noopener"; }
-      grid.appendChild(a);
+      a.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[it.label] || "") + "</svg>";
+      a.appendChild(el("span", null, SHORT[it.label] || it.label));
+      (LEFT.indexOf(it.label) >= 0 ? L : R).appendChild(a);
     });
+    var last = R.lastElementChild; if (last && R.children.length % 2) last.classList.add("wide");
   })();
   var pendingLink = null;
   var VERB = /^(?:por favor\s+)?(?:abrir|abri|abre|abra|abrindo|acessar|acesse|entrar no|entrar na|entrar em|ir para|ir pro|ir no|ir na|vai para|va para|ver|mostrar|mostre|me leve para|quero ver|quero abrir|iniciar|ligar)\s+(?:o |a |os |as |meu |minha |minhas |meus |no |na |do |da )*(.+)$/;
@@ -701,18 +785,20 @@ button { cursor: pointer; }
   });
   function bubble(kind, text) {
     var d = el("div", "msg " + kind); d.appendChild(el("span", "who", kind === "me" ? "Você" : "Jarvis")); d.appendChild(el("span", "body", text));
-    log.appendChild(d); log.scrollTop = log.scrollHeight; return d;
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+    var cap = kind === "me" ? $("#heard") : $("#caption"); if (kind !== "err") cap.textContent = kind === "me" ? "Você: " + text : text;
+    return d;
   }
   function reply(text, speak) { bubble("ai", text); if (speak) say(text, true); else say(text, false); }
   function send(text, viaVoice) {
     text = String(text || "").trim(); if (!text) return;
     bubble("me", text);
-    pendingLink = null;
+    pendingLink = null; $("#capAct").textContent = "";
     var out = handle(text), box = bubble("ai", out);
     if (pendingLink) {
       var a = el("a", "go", "Abrir " + pendingLink.name.replace(/^(o |a |as |os )/, "")); a.href = appHref(pendingLink, true);
       if (!(pendingLink.pkg && IS_ANDROID)) { a.target = "_blank"; a.rel = "noopener"; }
-      box.appendChild(a); log.scrollTop = log.scrollHeight;
+      box.appendChild(a.cloneNode(true)); $("#capAct").appendChild(a); log.scrollTop = log.scrollHeight;
     }
     say(out, !!viaVoice);
   }
@@ -769,6 +855,7 @@ button { cursor: pointer; }
 
   /* ---------- Autorização do microfone ---------- */
   function setMicState(s) {
+    $("#stageEnable").hidden = s === "ok";
     if (s === "ok") setPill("#micState", "ok", "Microfone: autorizado");
     else if (s === "bad") setPill("#micState", "bad", "Microfone: bloqueado");
     else setPill("#micState", "warn", "Microfone: não autorizado");
@@ -796,6 +883,8 @@ button { cursor: pointer; }
       else { setMicState("pending"); bubble("ai", "Não encontrei um microfone neste aparelho."); }
     }
   });
+  $("#stageEnable").addEventListener("click", function () { $("#enableVoiceBtn").click(); });
+  setInterval(function () { $("#orb").dataset.state = talking ? "talk" : (oneShot || always) ? "listen" : "idle"; }, 250);
   listen2Btn.addEventListener("click", function () { listenBtn.click(); });
   setMicState("pending"); checkMicPermission();
 
@@ -936,7 +1025,7 @@ button { cursor: pointer; }
   }
   setInterval(checkReminders, 30000);
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { loadAgenda(); } });
-  var VERSION = "10";
+  var VERSION = "11";
   $("#statusText").textContent += " · v" + VERSION;
   function checkUpdate() {
     if (navigator.onLine === false) return;
@@ -954,7 +1043,7 @@ button { cursor: pointer; }
   setInterval(tickClock, 1000);
   setInterval(function () { loadWeather(false); renderWeather(); }, 600000);
   loadWeather(true);
-  bubble("ai", "Pronto. Para usar a voz, toque em Ativar voz e microfone, logo acima. Diga \"ajuda\" para ver o que sei fazer.");
+  bubble("ai", "Pronto. Para usar a voz, toque em Ativar voz e microfone, logo abaixo. Diga \"ajuda\" para ver o que sei fazer.");
 })();
 </script>
 </body>
