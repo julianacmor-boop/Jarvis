@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060c16">
-<meta name="jarvis-version" content="8">
+<meta name="jarvis-version" content="9">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Jarvis</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -238,6 +238,10 @@ button { cursor: pointer; }
           <div class="bar"><i id="dayBar"></i></div>
           <div class="meta"><span id="dayPct">0% do dia</span><span id="dayLeft"></span></div>
         </div>
+      </div>
+      <div class="panel" id="newsCard">
+        <p class="label"><span>Notícias do dia</span><span id="nwStamp"></span></p>
+        <div class="agbody" id="nwBody"><p class="empty">Carregando as notícias...</p></div>
       </div>
       <div class="panel" id="agendaCard">
         <p class="label"><span>Agenda</span><span id="agStamp"></span></p>
@@ -590,7 +594,7 @@ button { cursor: pointer; }
     out += " " + weatherSay(/noite/.test(kind) ? "amanha" : "");
     return out;
   }
-  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Para a agenda diga \"o que tenho hoje\", \"o que tenho amanhã\" ou \"agenda da semana\". Para abrir apps diga \"abrir YouTube\", \"abrir música\", \"abrir Gmail\", \"abrir agenda\" ou \"abrir atividades\". Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
+  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Para a agenda diga \"o que tenho hoje\", \"o que tenho amanhã\" ou \"agenda da semana\". Para as notícias diga \"notícias do dia\", \"notícias do Brasil\" ou \"notícias do mundo\". Para abrir apps diga \"abrir YouTube\", \"abrir música\", \"abrir Gmail\", \"abrir agenda\" ou \"abrir atividades\". Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
   var SHORTCUTS = [
     { label: "Gmail", name: "o Gmail", url: "https://mail.google.com", re: /e-?mail|gmail|correio/, pkg: "com.google.android.gm", host: "mail.google.com", path: "/mail/", scheme: "https" },
     { label: "Agenda", name: "a Agenda", url: "https://calendar.google.com", re: /agenda|calendario/, pkg: "com.google.android.calendar", host: "calendar.google.com", path: "/calendar/", scheme: "https" },
@@ -618,7 +622,7 @@ button { cursor: pointer; }
   })();
   var pendingLink = null;
   var VERB = /^(?:por favor\s+)?(?:abrir|abri|abre|abra|abrindo|acessar|acesse|entrar no|entrar na|entrar em|ir para|ir pro|ir no|ir na|vai para|va para|ver|mostrar|mostre|me leve para|quero ver|quero abrir|iniciar|ligar)\s+(?:o |a |os |as |meu |minha |minhas |meus |no |na |do |da )*(.+)$/;
-  var NOT_SHORTCUT = /hoje|amanha|compromisso|reuniao|lembrete|semana|tenho|tarefa|timer|temporizador|cronometro|clima|tempo|chuva|temperatura|previsao|horas|concluir|pendente|voz|escuta|ajuda|comandos/;
+  var NOT_SHORTCUT = /noticia|manchete|hoje|amanha|compromisso|reuniao|lembrete|semana|tenho|tarefa|timer|temporizador|cronometro|clima|tempo|chuva|temperatura|previsao|horas|concluir|pendente|voz|escuta|ajuda|comandos/;
   function openShortcut(n) {
     var m = n.match(VERB), q;
     if (m) q = m[1];
@@ -639,6 +643,7 @@ button { cursor: pointer; }
   function handle(text) {
     var n = norm(text).replace(/^\s*(ei |oi |ola )?jarvis[,.!:]?\s*/, "").trim(), m;
     if (!n) return CALL;
+    if (/noticia|manchete|o que (esta|ta) acontecendo|o que aconteceu/.test(n)) return newsSay(/atualiz/.test(n) ? "refresh" : /mundo|internacional|exterior/.test(n) ? "mundo" : /brasil|politica|pais/.test(n) ? "brasil" : "");
     var op = openShortcut(n); if (op) return op;
     if (/compromisso|reuniao|lembrete|agenda|o que tenho (hoje|amanha|na semana)|semana/.test(n) && !/timer|tarefa|abrir/.test(n)) return agendaSay(/amanha/.test(n) ? 1 : /semana/.test(n) ? 2 : 0);
     if ((m = n.match(/^(bom dia|boa tarde|boa noite)\b/))) return greet(m[1]);
@@ -863,6 +868,41 @@ button { cursor: pointer; }
         return d + (ev.title || "Sem título") + (ev.allDay ? ", o dia todo" : " às " + hhmm(ev.start));
       }).join("; ") + ".";
   }
+  var newsData = store.get("jarvis.news", null);
+  function renderNews() {
+    var box = $("#nwBody"), st = $("#nwStamp"); box.textContent = "";
+    if (!newsData || !newsData.sections) { st.textContent = ""; box.appendChild(el("p", "empty", "Não consegui carregar as notícias agora.")); return; }
+    var g = new Date(newsData.generatedAt), old = isNaN(g.getTime()) || Date.now() - g.getTime() > 36 * 3600 * 1000;
+    st.textContent = isNaN(g.getTime()) ? "" : (old ? "desatualizadas, de " : "de ") + g.toLocaleDateString("pt-BR", { day: "numeric", month: "numeric" }) + " " + hhmm(g);
+    st.classList.toggle("stale", old);
+    newsData.sections.forEach(function (sec) {
+      box.appendChild(el("p", "agday", sec.title));
+      sec.items.forEach(function (it) {
+        var a = el("a", "ev"); a.href = it.u; a.target = "_blank"; a.rel = "noopener";
+        a.appendChild(el("span", "n", it.t)); a.appendChild(el("span", "l", it.s));
+        box.appendChild(a);
+      });
+    });
+  }
+  async function loadNews() {
+    try {
+      var r = await fetch("news.json?t=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) throw new Error("nofile");
+      newsData = await r.json(); store.set("jarvis.news", newsData);
+    } catch (e) {}
+    renderNews();
+  }
+  function newsSay(which) {
+    if (which === "refresh") { loadNews(); return "Atualizando as notícias. Peça de novo, \"notícias do dia\", em alguns segundos. Para trazer notícias novas do site, peça a atualização aqui no Claude."; }
+    if (!newsData || !newsData.sections) return "As notícias ainda não carregaram. Confira a internet.";
+    var secs = newsData.sections.filter(function (sec) { return !which || (which === "mundo" ? /mundo/i.test(sec.title) : /brasil/i.test(sec.title)); });
+    var g = new Date(newsData.generatedAt), old = isNaN(g.getTime()) || Date.now() - g.getTime() > 36 * 3600 * 1000;
+    var out = (old ? "Atenção, estas notícias estão desatualizadas. " : "") + "Notícias do dia, " + NAME + ". ";
+    secs.forEach(function (sec) {
+      out += sec.title + ": " + sec.items.slice(0, 4).map(function (it) { return it.t.replace(/\.$/, ""); }).join(". ") + ". ";
+    });
+    return out + "Os detalhes estão no quadro Notícias do dia.";
+  }
   function checkReminders() {
     if (!agData) return;
     var now = Date.now(), fired = store.get("jarvis.fired", {}), changed = false;
@@ -884,7 +924,7 @@ button { cursor: pointer; }
   }
   setInterval(checkReminders, 30000);
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { loadAgenda(); } });
-  var VERSION = "8";
+  var VERSION = "9";
   $("#statusText").textContent += " · v" + VERSION;
   function checkUpdate() {
     if (navigator.onLine === false) return;
@@ -896,6 +936,7 @@ button { cursor: pointer; }
     }).catch(function () {});
   }
   checkUpdate(); setInterval(checkUpdate, 300000);
+  renderNews(); loadNews(); setInterval(loadNews, 1800000);
   renderAgenda(); loadAgenda(); setInterval(loadAgenda, 900000); setTimeout(checkReminders, 4000);
   renderTasks(); renderTimers(); renderWeather(); tickClock();
   setInterval(tickClock, 1000);

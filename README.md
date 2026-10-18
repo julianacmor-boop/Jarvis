@@ -51,3 +51,8 @@ Os lembretes tocam e falam só enquanto o painel está aberto.
 - O painel não lê o Gmail nem o NAV, só abre os apps e sites. A Agenda vem do arquivo criptografado, atualizado sob pedido.
 - O Chrome só deixa abrir outro app logo depois de um toque. Por voz, se não abrir sozinho, toque no botão **Abrir** que aparece na conversa.
 - Os atalhos de app dependem do app estar instalado. Sem o app, abre o site.
+
+## Notícias do dia
+
+O quadro "Notícias do dia" lê `news.json` (público, sem criptografia). Comandos de voz: "notícias do dia", "notícias do Brasil", "notícias do mundo", "manchetes".
+Fontes: Agência Brasil, CNN Brasil e Euronews (Globo e UOL bloqueiam a leitura automática). Para renovar, peça no Claude "atualiza as notícias".
