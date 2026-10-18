@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060c16">
-<meta name="jarvis-version" content="9">
+<meta name="jarvis-version" content="10">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Jarvis</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -594,7 +594,7 @@ button { cursor: pointer; }
     out += " " + weatherSay(/noite/.test(kind) ? "amanha" : "");
     return out;
   }
-  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Para a agenda diga \"o que tenho hoje\", \"o que tenho amanhã\" ou \"agenda da semana\". Para as notícias diga \"notícias do dia\", \"notícias do Brasil\" ou \"notícias do mundo\". Para abrir apps diga \"abrir YouTube\", \"abrir música\", \"abrir Gmail\", \"abrir agenda\" ou \"abrir atividades\". Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
+  var HELP = "Posso dizer as horas e a data, dar o clima de Guaratinguetá e Lorena, iniciar timers, e cuidar das tarefas. Para a agenda diga \"o que tenho hoje\", \"o que tenho amanhã\" ou \"agenda da semana\". Para as notícias diga \"notícias do dia\", \"notícias do Brasil\" ou \"notícias do mundo\". Para abrir apps diga \"abrir\" e o nome: YouTube, música, Gmail, agenda, Mapas, WhatsApp, Spotify, Chrome, Fotos, Drive, Meet, Classroom, Play Store, Instagram, Netflix, Configurações, ou \"abrir atividades\" para o NAV. Exemplos: \"bom dia\", \"timer de 10 minutos\", \"adicionar tarefa comprar pão\", \"concluir tarefa pão\", \"como está o tempo em Lorena?\", \"previsão para amanhã\".";
   var SHORTCUTS = [
     { label: "Gmail", name: "o Gmail", url: "https://mail.google.com", re: /e-?mail|gmail|correio/, pkg: "com.google.android.gm", host: "mail.google.com", path: "/mail/", scheme: "https" },
     { label: "Agenda", name: "a Agenda", url: "https://calendar.google.com", re: /agenda|calendario/, pkg: "com.google.android.calendar", host: "calendar.google.com", path: "/calendar/", scheme: "https" },
@@ -603,12 +603,24 @@ button { cursor: pointer; }
     { label: "Mapas", name: "o Mapas", url: "https://maps.google.com", re: /\bmapas?\b|\brotas?\b/, pkg: "com.google.android.apps.maps", host: "maps.google.com", path: "/", scheme: "https" },
     { label: "WhatsApp", name: "o WhatsApp", url: "https://web.whatsapp.com", re: /whats ?app|zap/, pkg: "com.whatsapp", host: "send", path: "/", scheme: "whatsapp" },
     { label: "Spotify", name: "o Spotify", url: "https://open.spotify.com", re: /spotify/, pkg: "com.spotify.music", host: "open.spotify.com", path: "/", scheme: "https" },
+    { label: "Chrome", name: "o Chrome", url: "https://play.google.com/store/apps/details?id=com.android.chrome", re: /chrome|navegador|internet/, pkg: "com.android.chrome", launch: true },
+    { label: "Fotos", name: "o Fotos", url: "https://play.google.com/store/apps/details?id=com.google.android.apps.photos", re: /fotos?|galeria/, pkg: "com.google.android.apps.photos", launch: true },
+    { label: "Drive", name: "o Drive", url: "https://play.google.com/store/apps/details?id=com.google.android.apps.docs", re: /\bdrive\b|arquivos/, pkg: "com.google.android.apps.docs", launch: true },
+    { label: "Meet", name: "o Meet", url: "https://play.google.com/store/apps/details?id=com.google.android.apps.tachyon", re: /\bmeet\b|video ?chamada/, pkg: "com.google.android.apps.tachyon", launch: true },
+    { label: "Classroom", name: "o Classroom", url: "https://play.google.com/store/apps/details?id=com.google.android.apps.classroom", re: /classroom|sala de aula/, pkg: "com.google.android.apps.classroom", launch: true },
+    { label: "Keep (notas)", name: "o Keep", url: "https://play.google.com/store/apps/details?id=com.google.android.keep", re: /\bkeep\b|bloco de notas|anotacoes/, pkg: "com.google.android.keep", launch: true },
+    { label: "Play Store", name: "a Play Store", url: "https://play.google.com/store/apps/details?id=com.android.vending", re: /play ?store|loja/, pkg: "com.android.vending", launch: true },
+    { label: "Instagram", name: "o Instagram", url: "https://play.google.com/store/apps/details?id=com.instagram.android", re: /insta(gram)?/, pkg: "com.instagram.android", launch: true },
+    { label: "Netflix", name: "a Netflix", url: "https://play.google.com/store/apps/details?id=com.netflix.mediaclient", re: /netflix/, pkg: "com.netflix.mediaclient", launch: true },
+    { label: "Configurações", name: "as Configurações", url: "https://play.google.com/store", re: /configurac|ajustes/, pkg: "settings", launch: true, action: "android.settings.SETTINGS" },
     { label: "Atividades do NAV", name: "as atividades do NAV", url: "https://aluno.triventoeducacao.com.br/atividades/170622", re: /atividades?|\bnav\b|escola|trivento/ },
     { label: "Portal do NAV", name: "o portal do NAV, com notas, aulas e mensagens", url: "https://aluno.triventoeducacao.com.br/", re: /notas?|aulas?|mensagens?|portal/ }
   ];
   var IS_ANDROID = /Android/i.test(navigator.userAgent);
   function appHref(it, withFallback) {
     if (!it.pkg || !IS_ANDROID) return it.url;
+    if (it.launch) return "intent:#Intent;" + (it.action ? "action=" + it.action + ";" : "action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=" + it.pkg + ";") +
+      (withFallback ? "S.browser_fallback_url=" + encodeURIComponent(it.url) + ";" : "") + "end";
     return "intent://" + it.host + it.path + "#Intent;scheme=" + it.scheme + ";package=" + it.pkg + ";" +
       (withFallback ? "S.browser_fallback_url=" + encodeURIComponent(it.url) + ";" : "") + "end";
   }
@@ -631,7 +643,7 @@ button { cursor: pointer; }
       q = n;
     }
     var it = SHORTCUTS.filter(function (x) { return x.re.test(q); })[0];
-    if (!it) return m ? "Não conheço esse atalho. Posso abrir Gmail, Agenda, YouTube, YouTube Music, Mapas, WhatsApp, Spotify e o NAV (atividades, notas, aulas e mensagens)." : null;
+    if (!it) return m ? "Não conheço esse atalho. Posso abrir " + SHORTCUTS.filter(function (x) { return x.pkg; }).map(function (x) { return x.label; }).join(", ") + " e o NAV (atividades, notas, aulas e mensagens)." : null;
     pendingLink = it;
     if (it.pkg && IS_ANDROID) {
       try { location.href = appHref(it, false); } catch (e) {}
@@ -924,7 +936,7 @@ button { cursor: pointer; }
   }
   setInterval(checkReminders, 30000);
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { loadAgenda(); } });
-  var VERSION = "9";
+  var VERSION = "10";
   $("#statusText").textContent += " · v" + VERSION;
   function checkUpdate() {
     if (navigator.onLine === false) return;
